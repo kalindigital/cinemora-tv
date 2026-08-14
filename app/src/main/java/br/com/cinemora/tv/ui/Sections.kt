@@ -27,6 +27,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -196,6 +197,9 @@ internal fun CategoriesSection(
 internal fun SearchSection(catalog: Catalog, onOpenMovie: (Video) -> Unit, onOpenSeries: (Series) -> Unit, onPlayChannel: (Channel) -> Unit) {
     var query by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
+    // Ao entrar, o campo já recebe o foco: quem abre a busca quer digitar.
+    val campoFoco = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { campoFoco.requestFocus() } }
     val q = query.trim().lowercase()
     val active = q.length >= 2
     val movies = if (active) catalog.movies.filter { it.title.lowercase().contains(q) }.distinctBy { it.title.lowercase() }.take(30) else emptyList()
@@ -205,7 +209,8 @@ internal fun SearchSection(catalog: Catalog, onOpenMovie: (Video) -> Unit, onOpe
         OutlinedTextField(
             value = query, onValueChange = { query = it }, label = { Text("Buscar filmes, séries e canais") },
             singleLine = true, colors = fieldColors(),
-            modifier = Modifier.padding(start = 32.dp, top = 24.dp, end = 32.dp).fillMaxWidth().dpadFocusNav(focusManager),
+            modifier = Modifier.padding(start = 32.dp, top = 24.dp, end = 32.dp).fillMaxWidth()
+                .focusRequester(campoFoco).dpadFocusNav(focusManager),
         )
         when {
             !active -> EmptyNotice("Digite ao menos 2 letras para buscar.")

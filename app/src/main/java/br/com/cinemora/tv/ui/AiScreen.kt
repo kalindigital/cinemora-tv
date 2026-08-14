@@ -24,6 +24,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.font.FontWeight
@@ -69,6 +71,10 @@ internal fun AiSection(
         return
     }
 
+    val campoFoco = remember { FocusRequester() }
+    // Voltando do microfone (ou entrando sem ele), o campo assume o foco para digitar.
+    LaunchedEffect(ouvindo) { if (!ouvindo) runCatching { campoFoco.requestFocus() } }
+
     if (ouvindo) {
         VoiceOverlay(
             onResult = { falado -> ouvindo = false; query = falado; onAsk(falado) },
@@ -87,7 +93,7 @@ internal fun AiSection(
                     // Enter/OK no teclado já dispara a busca, sem precisar descer até o botão.
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus(); onAsk(query) }),
-                    modifier = Modifier.fillMaxWidth().dpadFocusNav(focusManager),
+                    modifier = Modifier.fillMaxWidth().focusRequester(campoFoco).dpadFocusNav(focusManager),
                 )
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
