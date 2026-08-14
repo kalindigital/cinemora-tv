@@ -14,8 +14,10 @@ import br.com.cinemora.tv.data.CinemoraRepository
 import br.com.cinemora.tv.data.SortOrder
 import br.com.cinemora.tv.data.UpdateInfo
 import br.com.cinemora.tv.data.UpdateService
+import br.com.cinemora.tv.data.WatchNext
 import br.com.cinemora.tv.data.OpenAiClient
 import br.com.cinemora.tv.data.Recommendations
+import br.com.cinemora.tv.data.ResumeEntry
 import br.com.cinemora.tv.data.LocalStore
 import br.com.cinemora.tv.data.UserData
 import br.com.cinemora.tv.model.Catalog
@@ -80,11 +82,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var updateState: UpdateState by mutableStateOf(UpdateState.Idle)
         private set
+    /** Último título em andamento, oferecido ao abrir o app. */
+    var resumeEntry: ResumeEntry? by mutableStateOf(null)
+        private set
     private var openedMovie: Video? = null
     private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
 
     init {
+        resumeEntry = repo.resumeEntries().firstOrNull()
+        // Republicar reforça o cartão na tela inicial da TV caso a escrita anterior tenha falhado.
+        resumeEntry?.let { WatchNext.update(app, it) }
         autoLogin()
         hasOpenAiKey = openAi.isConfigured()
         checkForUpdate(silencioso = true)
@@ -130,6 +138,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun dismissUpdate() { updateState = UpdateState.Idle }
+
+    fun dismissResume() { resumeEntry = null }
+
+    fun refreshResume() { resumeEntry = repo.resumeEntries().firstOrNull() }
 
     fun account(): Credentials? = repo.savedCredentials()
 

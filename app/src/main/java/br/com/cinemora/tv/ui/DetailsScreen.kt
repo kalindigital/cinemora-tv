@@ -78,26 +78,26 @@ internal fun MovieDetail(
     LaunchedEffect(video.id) { runCatching { playFocus.requestFocus() } }
     LazyColumn(Modifier.fillMaxSize().background(Ink), contentPadding = PaddingValues(bottom = 40.dp)) {
       item {
-        Row(Modifier.fillMaxWidth().padding(40.dp)) {
+        Row(Modifier.fillMaxWidth().padding(start = 40.dp, top = 28.dp, end = 40.dp, bottom = 8.dp)) {
             AsyncImage(
                 model = ImageUrls.detail(video.coverUrl), contentDescription = video.title, contentScale = ContentScale.Crop,
-                modifier = Modifier.width(240.dp).height(360.dp).clip(RoundedCornerShape(10.dp)).background(Panel),
+                modifier = Modifier.width(150.dp).height(222.dp).clip(RoundedCornerShape(10.dp)).background(Panel),
             )
-            Column(Modifier.padding(start = 32.dp)) {
-                Text(video.title, color = Mist, fontSize = 34.sp, lineHeight = 38.sp, fontWeight = FontWeight.ExtraBold)
+            Column(Modifier.padding(start = 26.dp)) {
+                Text(video.title, color = Mist, fontSize = 28.sp, lineHeight = 32.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2)
                 val meta = listOfNotNull(video.year, video.rating?.let { "★ $it" }).joinToString("   ·   ")
                 if (meta.isNotBlank()) {
                     Spacer(Modifier.height(8.dp))
                     Text(meta, color = Signal, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(10.dp))
                 val synopsis = when {
                     plot == null -> "Carregando sinopse…"
                     plot.isBlank() -> "Sem sinopse disponível."
                     else -> plot
                 }
-                Text(synopsis, color = Color(0xFFC9C2CB), fontSize = 15.sp, lineHeight = 22.sp)
-                Spacer(Modifier.height(26.dp))
+                Text(synopsis, color = Color(0xFFC9C2CB), fontSize = 14.sp, lineHeight = 20.sp, maxLines = 4)
+                Spacer(Modifier.height(14.dp))
                 val emAndamento = resumeMs > 0
                 if (emAndamento) {
                     Text(
@@ -119,7 +119,7 @@ internal fun MovieDetail(
                 }
                 // Basta estar no histórico: nem todo assistido tem posição salva.
                 if (isWatched) {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(10.dp))
                     ActionButton("Remover dos assistidos", onClick = onRemoveWatched)
                 }
             }

@@ -55,6 +55,12 @@ class MainActivity : ComponentActivity() {
                 onAskAi = viewModel::askAi,
                 hasOpenAiKey = viewModel.hasOpenAiKey,
                 onSaveOpenAiKey = viewModel::saveOpenAiKey,
+                resumeEntry = viewModel.resumeEntry,
+                onResumeEntry = { entrada ->
+                    viewModel.dismissResume()
+                    play(entrada.title, entrada.streamUrl, false, entrada.posterUrl)
+                },
+                onDismissResume = viewModel::dismissResume,
                 updateState = viewModel.updateState,
                 onCheckUpdate = { viewModel.checkForUpdate() },
                 onDownloadUpdate = viewModel::downloadUpdate,
@@ -69,6 +75,7 @@ class MainActivity : ComponentActivity() {
         // Rede de segurança: se o player foi encerrado sem devolver resultado, o sinal
         // gravado em disco ainda é lido aqui.
         viewModel.onPlaybackFinished()
+        viewModel.refreshResume()
     }
 
     private fun play(title: String, url: String, restart: Boolean, poster: String?) =

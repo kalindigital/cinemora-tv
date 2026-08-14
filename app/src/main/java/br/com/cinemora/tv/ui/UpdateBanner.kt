@@ -13,8 +13,12 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,6 +38,12 @@ internal fun UpdateBanner(
         else -> return
     }
     val baixando = state as? UpdateState.Downloading
+    // Nas telas com fileiras o D-pad percorre os cartões e nunca alcançava o banner:
+    // ao aparecer, ele mesmo assume o foco.
+    val atualizarFoco = remember { FocusRequester() }
+    LaunchedEffect(info.version, baixando == null) {
+        if (baixando == null) runCatching { atualizarFoco.requestFocus() }
+    }
 
     Column(
         modifier
@@ -53,7 +63,7 @@ internal fun UpdateBanner(
             Text("Baixando… ${baixando.percent}%", color = Signal, fontSize = 14.sp, fontWeight = FontWeight.Medium)
         } else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ActionButton("Atualizar agora", onClick = onUpdate)
+                ActionButton("Atualizar agora", modifier = Modifier.focusRequester(atualizarFoco), onClick = onUpdate)
                 ActionButton("Agora não", onClick = onDismiss)
             }
         }

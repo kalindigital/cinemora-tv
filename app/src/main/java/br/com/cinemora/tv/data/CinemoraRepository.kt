@@ -58,6 +58,8 @@ class CinemoraRepository(
 
     fun isStreamWatched(streamUrl: String): Boolean = store.isStreamWatched(streamUrl)
 
+    fun resumeEntries(): List<ResumeEntry> = store.resumeEntries()
+
     fun openAiKey(): String? = store.openAiKey()
 
     fun saveOpenAiKey(key: String) = store.saveOpenAiKey(key)

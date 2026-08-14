@@ -63,6 +63,7 @@ import br.com.cinemora.tv.R
 import br.com.cinemora.tv.AiState
 import br.com.cinemora.tv.data.CacheTtl
 import br.com.cinemora.tv.data.Recommendations
+import br.com.cinemora.tv.data.ResumeEntry
 import br.com.cinemora.tv.data.SortOrder
 import br.com.cinemora.tv.model.Credentials
 import br.com.cinemora.tv.model.Episode
@@ -104,6 +105,9 @@ fun CinemoraApp(
     onAskAi: (String) -> Unit,
     hasOpenAiKey: Boolean,
     onSaveOpenAiKey: (String) -> Unit,
+    resumeEntry: ResumeEntry?,
+    onResumeEntry: (ResumeEntry) -> Unit,
+    onDismissResume: () -> Unit,
     updateState: UpdateState,
     onCheckUpdate: () -> Unit,
     onDownloadUpdate: () -> Unit,
@@ -150,6 +154,9 @@ fun CinemoraApp(
                     onAskAi = onAskAi,
                     hasOpenAiKey = hasOpenAiKey,
                     onSaveOpenAiKey = onSaveOpenAiKey,
+                    resumeEntry = resumeEntry,
+                    onResumeEntry = onResumeEntry,
+                    onDismissResume = onDismissResume,
                     updateState = updateState,
                     onCheckUpdate = onCheckUpdate,
                     onDownloadUpdate = onDownloadUpdate,
@@ -206,6 +213,9 @@ private fun HomeShell(
     onAskAi: (String) -> Unit,
     hasOpenAiKey: Boolean,
     onSaveOpenAiKey: (String) -> Unit,
+    resumeEntry: ResumeEntry?,
+    onResumeEntry: (ResumeEntry) -> Unit,
+    onDismissResume: () -> Unit,
     updateState: UpdateState,
     onCheckUpdate: () -> Unit,
     onDownloadUpdate: () -> Unit,
@@ -316,6 +326,14 @@ private fun HomeShell(
                 }
             }
             TopBar(section, contentFocus) { sectionName = it.name; openMovieId = null; openSeriesId = null }
+            if (updateState is UpdateState.Idle) {
+                ResumeBanner(
+                    resumeEntry,
+                    onResume = onResumeEntry,
+                    onDismiss = onDismissResume,
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(28.dp),
+                )
+            }
             UpdateBanner(
                 updateState,
                 onUpdate = onDownloadUpdate,
