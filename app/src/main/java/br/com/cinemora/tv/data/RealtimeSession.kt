@@ -126,7 +126,13 @@ class RealtimeSession(
                 // para o microfone e ela se interrompia sozinha.
                 if (falandoAgora) continue
                 val audio = Base64.encodeToString(buffer.copyOf(lidos), Base64.NO_WRAP)
-                ws.send(JSONObject().put("type", "input_audio_buffer.append").put("audio", audio).toString())
+                val enviado = ws.send(
+                    JSONObject().put("type", "input_audio_buffer.append").put("audio", audio).toString(),
+                )
+                if (!enviado) {
+                    onEvent(RealtimeEvent.Erro("o canal parou de aceitar áudio"))
+                    break
+                }
             }
         }
     }
@@ -159,7 +165,11 @@ class RealtimeSession(
             while (ativo) {
                 val pedaco = runCatching { fila.poll(200, TimeUnit.MILLISECONDS) }.getOrNull()
                 if (pedaco == null) {
-                    falandoAgora = false
+                    // Fila vazia: a resposta terminou, o microfone volta a valer.
+                    if (falandoAgora) {
+                        falandoAgora = false
+                        onEvent(RealtimeEvent.Ouvindo)
+                    }
                     continue
                 }
                 falandoAgora = true
@@ -197,10 +207,22 @@ class RealtimeSession(
                     onEvent(RealtimeEvent.VocêDisse(evento.optString("transcript").trim()))
                 "response.output_audio_transcript.done", "response.audio_transcript.done" ->
                     onEvent(RealtimeEvent.ElaDisse(evento.optString("transcript").trim()))
+                "response.done", "response.output_audio.done", "response.audio.done" -> {
+                    if (fila.isEmpty()) {
+                        falandoAgora = false
+                        onEvent(RealtimeEvent.Ouvindo)
+                    }
+                }
                 "error" -> onEvent(
                     RealtimeEvent.Erro(evento.optJSONObject("error")?.optString("message") ?: tipo),
                 )
             }
+        }
+
+        override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+            // Sem isto a tela ficava presa em "respondendo" quando a linha caía.
+            if (ativo) onEvent(RealtimeEvent.Erro("a conexão foi encerrada ($code)"))
+            stop()
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {

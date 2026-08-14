@@ -180,6 +180,8 @@ internal fun ChatScreen(
                     val message = session!!.messages[index]
                     Mensagem(
                         message, catalog, onOpenMovie, onOpenSeries,
+                        // Só a última resposta é "digitada"; as antigas já aparecem inteiras.
+                        digitando = index == session.messages.lastIndex && message.role == ChatRole.ASSISTANT,
                         onClick = {
                             if (message.role == ChatRole.ASSISTANT) onSpeakAgain(message.text) else retomarDe = index
                         },
@@ -218,7 +220,6 @@ internal fun ChatScreen(
                         ouvindo = true
                     }
                 }
-                IconActionButton(Icons.Rounded.GraphicEq, "Conversa ao vivo", onClick = onStartLive)
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
@@ -232,9 +233,25 @@ internal fun ChatScreen(
                     modifier = Modifier.weight(1f).focusRequester(campoFoco).dpadFocusNav(focusManager),
                 )
                 IconActionButton(Icons.Rounded.Send, "Enviar") { onSend(query); query = "" }
+                // No canto: indo para o lado a partir do campo, você cai no enviar, não aqui.
+                IconActionButton(Icons.Rounded.GraphicEq, "Conversa ao vivo", onClick = onStartLive)
             }
         }
     }
+}
+
+/** Revela o texto aos poucos, como se estivesse sendo escrito. */
+@Composable
+private fun textoDigitado(texto: String): String {
+    var mostrados by remember(texto) { mutableStateOf(0) }
+    LaunchedEffect(texto) {
+        mostrados = 0
+        while (mostrados < texto.length) {
+            kotlinx.coroutines.delay(18)
+            mostrados = (mostrados + 2).coerceAtMost(texto.length)
+        }
+    }
+    return texto.take(mostrados)
 }
 
 @Composable
@@ -257,6 +274,7 @@ private fun Mensagem(
     catalog: Catalog,
     onOpenMovie: (Video) -> Unit,
     onOpenSeries: (Series) -> Unit,
+    digitando: Boolean = false,
     onClick: () -> Unit,
 ) {
     val doUsuario = message.role == ChatRole.USER
@@ -283,7 +301,8 @@ private fun Mensagem(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
             Column {
-                Text(message.text, color = Mist, fontSize = 15.sp, lineHeight = 21.sp)
+                val visivel = if (digitando) textoDigitado(message.text) else message.text
+                Text(visivel, color = Mist, fontSize = 15.sp, lineHeight = 21.sp)
                 if (focused) {
                     Spacer(Modifier.height(6.dp))
                     Text(
