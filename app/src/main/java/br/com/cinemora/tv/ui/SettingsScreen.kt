@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import br.com.cinemora.tv.BuildConfig
 import br.com.cinemora.tv.UpdateState
 import br.com.cinemora.tv.data.CacheTtl
+import br.com.cinemora.tv.data.WatchNext
 import br.com.cinemora.tv.data.SortOrder
 
 @Composable
@@ -53,6 +54,10 @@ internal fun SettingsSection(
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(40.dp)) {
         Text("Definições", color = Mist, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
         Spacer(Modifier.height(28.dp))
+        Text("TELA INICIAL DA TV", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Spacer(Modifier.height(10.dp))
+        Text("Cartão \"Continuar assistindo\": ${WatchNext.lastStatus}", color = Muted, fontSize = 13.sp)
+        Spacer(Modifier.height(30.dp))
         Text("VERSÃO DO APP", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         Spacer(Modifier.height(10.dp))
         Text(

@@ -13,8 +13,12 @@ import androidx.tvprovider.media.tv.WatchNextProgram
  * um cartão do sistema que retoma a reprodução sem passar pelo app.
  */
 object WatchNext {
+    /** Última tentativa, exibida em Definições (não há como ver o log da TV daqui). */
+    var lastStatus: String = "ainda não publicado"
+        private set
+
     fun update(context: Context, entry: ResumeEntry) {
-        runCatching {
+        val resultado = runCatching {
             val builder = WatchNextProgram.Builder()
                 .setType(TvContractCompat.WatchNextPrograms.TYPE_MOVIE)
                 .setWatchNextType(TvContractCompat.WatchNextPrograms.WATCH_NEXT_TYPE_CONTINUE)
@@ -27,9 +31,12 @@ object WatchNext {
             entry.posterUrl?.let { builder.setPosterArtUri(Uri.parse(it)) }
 
             val values: ContentValues = builder.build().toContentValues()
-            val existente = findId(context, entry.id)
+            // A consulta é isolada: quando ela falhava, a exceção abortava a inserção
+            // inteira e o cartão nunca era criado.
+            val existente = runCatching { findId(context, entry.id) }.getOrNull()
             if (existente == null) {
                 context.contentResolver.insert(TvContractCompat.WatchNextPrograms.CONTENT_URI, values)
+                    ?: error("o sistema recusou a inserção")
             } else {
                 context.contentResolver.update(
                     ContentUris.withAppendedId(TvContractCompat.WatchNextPrograms.CONTENT_URI, existente),
@@ -37,6 +44,10 @@ object WatchNext {
                 )
             }
         }
+        lastStatus = resultado.fold(
+            onSuccess = { "publicado às ${java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}" },
+            onFailure = { "falhou: ${it::class.java.simpleName} — ${it.message.orEmpty().take(120)}" },
+        )
     }
 
     fun remove(context: Context, id: String) {
