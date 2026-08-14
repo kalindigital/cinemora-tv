@@ -71,7 +71,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         app,
         openAi,
         onFalando = { falando -> speaking = falando },
-        onStatus = { texto -> voiceStatus = texto },
     )
     var state: AppState by mutableStateOf(AppState.Login)
         private set
@@ -97,9 +96,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var voiceMode: VoiceMode by mutableStateOf(VoiceMode.GOOGLE)
         private set
     var speaking: Boolean by mutableStateOf(false)
-        private set
-    /** Último estado da voz, exibido no chat quando algo dá errado. */
-    var voiceStatus: String? by mutableStateOf(null)
         private set
     var sortOrder: SortOrder by mutableStateOf(repo.sortOrder())
         private set
