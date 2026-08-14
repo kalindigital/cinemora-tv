@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
@@ -37,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +59,7 @@ import br.com.cinemora.tv.model.Season
 import br.com.cinemora.tv.model.Series
 import br.com.cinemora.tv.model.Video
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun MovieDetail(
@@ -76,9 +79,21 @@ internal fun MovieDetail(
     BackHandler(onBack = onClose)
     val playFocus = remember { FocusRequester() }
     LaunchedEffect(video.id) { runCatching { playFocus.requestFocus() } }
-    LazyColumn(Modifier.fillMaxSize().background(Ink), contentPadding = PaddingValues(bottom = 40.dp)) {
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    LazyColumn(
+        Modifier.fillMaxSize().background(Ink),
+        state = listState,
+        contentPadding = PaddingValues(bottom = 40.dp),
+    ) {
       item {
-        Row(Modifier.fillMaxWidth().padding(start = 40.dp, top = 28.dp, end = 40.dp, bottom = 8.dp)) {
+        Row(
+            Modifier.fillMaxWidth()
+                // Voltando dos relacionados, o Compose traz só o botão focado para a tela e o
+                // título ficava acima do corte: aqui a página volta ao topo.
+                .onFocusChanged { if (it.hasFocus) scope.launch { listState.animateScrollToItem(0) } }
+                .padding(start = 40.dp, top = 28.dp, end = 40.dp, bottom = 8.dp),
+        ) {
             AsyncImage(
                 model = ImageUrls.detail(video.coverUrl), contentDescription = video.title, contentScale = ContentScale.Crop,
                 modifier = Modifier.width(150.dp).height(222.dp).clip(RoundedCornerShape(10.dp)).background(Panel),
@@ -162,9 +177,19 @@ internal fun SeriesDetailScreen(
 
     // Só a página rola: temporadas e episódios são colunas comuns. Listas roláveis
     // aninhadas brigavam com a rolagem da página e faziam o foco pular sozinho.
-    LazyColumn(Modifier.fillMaxSize().background(Ink), contentPadding = PaddingValues(bottom = 32.dp)) {
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    LazyColumn(
+        Modifier.fillMaxSize().background(Ink),
+        state = listState,
+        contentPadding = PaddingValues(bottom = 32.dp),
+    ) {
       item {
-        Row(Modifier.fillMaxWidth().padding(start = 40.dp, top = 28.dp, end = 40.dp)) {
+        Row(
+            Modifier.fillMaxWidth()
+                .onFocusChanged { if (it.hasFocus) scope.launch { listState.animateScrollToItem(0) } }
+                .padding(start = 40.dp, top = 28.dp, end = 40.dp),
+        ) {
             AsyncImage(
                 model = ImageUrls.detail(series.coverUrl), contentDescription = series.title, contentScale = ContentScale.Crop,
                 modifier = Modifier.width(126.dp).height(186.dp).clip(RoundedCornerShape(10.dp)).background(Panel),
