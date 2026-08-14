@@ -9,6 +9,10 @@ data class AiMatches(val movies: List<Video>, val series: List<Series>)
 
 object CatalogMatcher {
     private const val MIN_LENGTH = 4
+    private const val NOME_PROPRIO = 8
+    // O nome do catálogo precisa cobrir a maior parte da sugestão: senão "Caçadores"
+    // roubaria "Os Caçadores da Arca Perdida".
+    private const val COBERTURA = 60
 
     // Compilados uma vez: criá-los dentro de normalize() custava centenas de milhares
     // de compilações por busca e travava a TV por segundos.
@@ -49,12 +53,26 @@ object CatalogMatcher {
             ?.second
 
     private fun pontuar(catalogTitle: String, term: String): Int = when {
-        catalogTitle == term -> 3
-        catalogTitle.startsWith("$term ") -> 2
-        // Só trechos longos: um título curto do catálogo ("Guerra") casava dentro de
-        // qualquer sugestão parecida e trazia filmes sem relação com o pedido.
+        catalogTitle == term -> 4
+        catalogTitle.startsWith("$term ") -> 3
+        // O catálogo às vezes usa o nome curto ("Náufrago") e a sugestão vem completa
+        // ("O Náufrago"): aceitamos, desde que o título do catálogo seja longo o bastante
+        // para não ser genérico — foi assim que "Guerra" entrava em pedidos da Marvel.
+        catalogTitle.length >= NOME_PROPRIO &&
+            catalogTitle.length * 100 >= term.length * COBERTURA &&
+            contemPalavras(term, catalogTitle) -> 2
         term.length >= 10 && catalogTitle.contains(term) -> 1
         else -> 0
+    }
+
+    /** Só aceita se o título aparecer inteiro, entre limites de palavra. */
+    private fun contemPalavras(texto: String, alvo: String): Boolean {
+        val posicao = texto.indexOf(alvo)
+        if (posicao < 0) return false
+        val antes = posicao == 0 || texto[posicao - 1] == ' '
+        val fim = posicao + alvo.length
+        val depois = fim == texto.length || texto[fim] == ' '
+        return antes && depois
     }
 
     /** Minúsculas, sem acentos, sem ano nem marcações de qualidade. */

@@ -446,9 +446,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         speaker.stop()
 
         executor.execute {
-            // A IA não conhece o catálogo: mandamos os títulos que combinam com a pergunta
-            // para ela responder sobre o que você tem, em vez de mandar alugar em outro lugar.
-            val doCatalogo = catalog?.let { CatalogSearch.candidates(pergunta, it) }.orEmpty()
+            // A IA não conhece o catálogo. Buscamos de duas formas: pelo que a pessoa citou
+            // ("tem homem-aranha?") e pelo que a própria IA sabe atender ao pedido
+            // ("filmes do Adam Sandler" -> filmografia -> cruzamos com o catálogo).
+            val citados = catalog?.let { CatalogSearch.candidates(pergunta, it) }.orEmpty()
+            val porTema = if (catalog == null) {
+                emptyList()
+            } else {
+                runCatching { CatalogMatcher.match(openAi.recommend(pergunta), catalog) }
+                    .map { it.movies.map(Video::title) + it.series.map(Series::title) }
+                    .getOrDefault(emptyList())
+            }
+            val doCatalogo = (citados + porTema).distinct().take(15)
             val paraEnvio = ChatStore.lastMessages(comPergunta.messages).toMutableList()
             if (doCatalogo.isNotEmpty()) {
                 val ultima = paraEnvio.last()

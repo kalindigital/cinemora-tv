@@ -43,6 +43,19 @@ class CatalogMatcherTest {
         assertTrue(result.movies.isEmpty())
     }
 
+    @Test fun `casa quando o catalogo usa o nome mais curto que a sugestao`() {
+        val curtos = catalog.copy(movies = listOf(movie("20", "Náufrago (2000)")))
+        val result = CatalogMatcher.match(listOf("O Náufrago"), curtos)
+        assertEquals(listOf("20"), result.movies.map { it.id })
+    }
+
+    @Test fun `nao troca o filme por um homonimo curto`() {
+        // "Os Caçadores da Arca Perdida" não pode virar "Caçadores (2022)".
+        val homonimo = catalog.copy(movies = listOf(movie("30", "Caçadores (2022)")))
+        val result = CatalogMatcher.match(listOf("Os Caçadores da Arca Perdida"), homonimo)
+        assertTrue(result.movies.isEmpty())
+    }
+
     @Test fun `prefere o titulo exato ao parecido`() {
         val comParecidos = catalog.copy(
             movies = listOf(movie("10", "A Origem do Mal (2022)"), movie("11", "A Origem (2010) [4K]")),
