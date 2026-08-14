@@ -64,6 +64,7 @@ import br.com.cinemora.tv.AiState
 import br.com.cinemora.tv.data.CacheTtl
 import br.com.cinemora.tv.data.ChatSession
 import br.com.cinemora.tv.data.VoiceMode
+import br.com.cinemora.tv.data.VoiceSpeed
 import br.com.cinemora.tv.data.Recommendations
 import br.com.cinemora.tv.data.ResumeEntry
 import br.com.cinemora.tv.data.SortOrder
@@ -121,6 +122,10 @@ fun CinemoraApp(
     onContinueFrom: (Int) -> Unit,
     voiceMode: VoiceMode,
     onSetVoiceMode: (VoiceMode) -> Unit,
+    openAiVoice: String,
+    onSetOpenAiVoice: (String) -> Unit,
+    voiceSpeed: VoiceSpeed,
+    onSetVoiceSpeed: (VoiceSpeed) -> Unit,
     resumeEntry: ResumeEntry?,
     onResumeEntry: (ResumeEntry) -> Unit,
     onDismissResume: () -> Unit,
@@ -184,6 +189,10 @@ fun CinemoraApp(
                     onContinueFrom = onContinueFrom,
                     voiceMode = voiceMode,
                     onSetVoiceMode = onSetVoiceMode,
+                    openAiVoice = openAiVoice,
+                    onSetOpenAiVoice = onSetOpenAiVoice,
+                    voiceSpeed = voiceSpeed,
+                    onSetVoiceSpeed = onSetVoiceSpeed,
                     resumeEntry = resumeEntry,
                     onResumeEntry = onResumeEntry,
                     onDismissResume = onDismissResume,
@@ -257,6 +266,10 @@ private fun HomeShell(
     onContinueFrom: (Int) -> Unit,
     voiceMode: VoiceMode,
     onSetVoiceMode: (VoiceMode) -> Unit,
+    openAiVoice: String,
+    onSetOpenAiVoice: (String) -> Unit,
+    voiceSpeed: VoiceSpeed,
+    onSetVoiceSpeed: (VoiceSpeed) -> Unit,
     resumeEntry: ResumeEntry?,
     onResumeEntry: (ResumeEntry) -> Unit,
     onDismissResume: () -> Unit,
@@ -378,6 +391,10 @@ private fun HomeShell(
                         onRefresh,
                         voiceMode,
                         onSetVoiceMode,
+                        openAiVoice,
+                        onSetOpenAiVoice,
+                        voiceSpeed,
+                        onSetVoiceSpeed,
                     )
                     Section.PERFIL -> ProfileSection(account, onLogout)
                 }

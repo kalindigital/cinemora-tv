@@ -24,6 +24,7 @@ import br.com.cinemora.tv.data.ChatStore
 import br.com.cinemora.tv.data.OpenAiClient
 import br.com.cinemora.tv.data.Speaker
 import br.com.cinemora.tv.data.VoiceMode
+import br.com.cinemora.tv.data.VoiceSpeed
 import br.com.cinemora.tv.data.Recommendations
 import br.com.cinemora.tv.data.ResumeEntry
 import br.com.cinemora.tv.data.LocalStore
@@ -71,6 +72,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         app,
         openAi,
         onFalando = { falando -> speaking = falando },
+        vozOpenAi = { openAiVoice },
+        velocidade = { voiceSpeed },
     )
     var state: AppState by mutableStateOf(AppState.Login)
         private set
@@ -96,6 +99,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var voiceMode: VoiceMode by mutableStateOf(VoiceMode.GOOGLE)
         private set
     var speaking: Boolean by mutableStateOf(false)
+        private set
+    var openAiVoice: String by mutableStateOf("alloy")
+        private set
+    var voiceSpeed: VoiceSpeed by mutableStateOf(VoiceSpeed.NORMAL)
         private set
     var sortOrder: SortOrder by mutableStateOf(repo.sortOrder())
         private set
@@ -123,6 +130,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         hasOpenAiKey = openAi.isConfigured()
         chatSessions = repo.chatSessions()
         voiceMode = repo.voiceMode()
+        openAiVoice = repo.openAiVoice()
+        voiceSpeed = repo.voiceSpeed()
         checkForUpdate(silencioso = true)
     }
 
@@ -309,6 +318,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun stopSpeech() { speaker.stop() }
 
+    /** Trocar de voz ou de velocidade toca uma amostra, para dar para comparar. */
+    fun changeOpenAiVoice(voice: String) {
+        repo.setOpenAiVoice(voice)
+        openAiVoice = voice
+        speaker.speak(AMOSTRA, VoiceMode.OPENAI)
+    }
+
+    fun changeVoiceSpeed(speed: VoiceSpeed) {
+        repo.setVoiceSpeed(speed)
+        voiceSpeed = speed
+        if (voiceMode != VoiceMode.MUDO) speaker.speak(AMOSTRA, voiceMode)
+    }
+
     /** Reler uma resposta já recebida, sem gastar nova chamada. */
     fun speakAgain(text: String) { speaker.speak(text, voiceMode) }
 
@@ -408,4 +430,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun returnToLogin() { state = AppState.Login }
 
     override fun onCleared() { executor.shutdownNow(); speaker.release() }
+
+    private companion object {
+        const val AMOSTRA = "Olá! É assim que eu vou falar com você no Cinemora."
+    }
 }

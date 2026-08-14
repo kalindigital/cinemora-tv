@@ -63,6 +63,19 @@ class LocalStore(context: Context) {
         prefs.edit().putString(KEY_VOICE, mode.name).apply()
     }
 
+    fun openAiVoice(): String = prefs.getString(KEY_OPENAI_VOICE, "alloy") ?: "alloy"
+
+    fun setOpenAiVoice(voice: String) {
+        prefs.edit().putString(KEY_OPENAI_VOICE, voice).apply()
+    }
+
+    fun voiceSpeed(): VoiceSpeed =
+        runCatching { VoiceSpeed.valueOf(prefs.getString(KEY_VOICE_SPEED, "") ?: "") }.getOrDefault(VoiceSpeed.NORMAL)
+
+    fun setVoiceSpeed(speed: VoiceSpeed) {
+        prefs.edit().putString(KEY_VOICE_SPEED, speed.name).apply()
+    }
+
     fun sortOrder(): SortOrder =
         runCatching { SortOrder.valueOf(prefs.getString(KEY_SORT, "") ?: "") }.getOrDefault(SortOrder.PADRAO)
 
@@ -155,5 +168,7 @@ class LocalStore(context: Context) {
         const val KEY_RESUME = "resume_entries"
         const val KEY_CHATS = "chat_sessions"
         const val KEY_VOICE = "voice_mode"
+        const val KEY_OPENAI_VOICE = "openai_voice"
+        const val KEY_VOICE_SPEED = "voice_speed"
     }
 }

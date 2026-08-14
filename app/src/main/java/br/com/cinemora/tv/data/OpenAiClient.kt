@@ -89,11 +89,12 @@ class OpenAiClient(
     }
 
     /** Áudio da resposta pela OpenAI, quando o usuário escolhe essa voz. */
-    fun speech(text: String): ByteArray? = runCatching {
+    fun speech(text: String, voice: String = "alloy", speed: Float = 1f): ByteArray? = runCatching {
         val body = JSONObject()
             .put("model", "gpt-4o-mini-tts")
-            .put("voice", "alloy")
+            .put("voice", voice)
             .put("input", text.take(900))
+            .put("speed", speed)
             .put("response_format", "mp3")
         postBytes("https://api.openai.com/v1/audio/speech", body.toString())
     }.getOrNull()

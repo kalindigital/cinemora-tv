@@ -66,6 +66,14 @@ class CinemoraRepository(
 
     fun voiceMode(): VoiceMode = store.voiceMode()
 
+    fun openAiVoice(): String = store.openAiVoice()
+
+    fun setOpenAiVoice(voice: String) = store.setOpenAiVoice(voice)
+
+    fun voiceSpeed(): VoiceSpeed = store.voiceSpeed()
+
+    fun setVoiceSpeed(speed: VoiceSpeed) = store.setVoiceSpeed(speed)
+
     fun setVoiceMode(mode: VoiceMode) = store.setVoiceMode(mode)
 
     fun openAiKey(): String? = store.openAiKey()

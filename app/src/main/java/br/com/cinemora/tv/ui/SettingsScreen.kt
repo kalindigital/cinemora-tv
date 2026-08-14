@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -36,7 +38,9 @@ import br.com.cinemora.tv.BuildConfig
 import br.com.cinemora.tv.UpdateState
 import br.com.cinemora.tv.data.CacheTtl
 import br.com.cinemora.tv.data.SortOrder
+import br.com.cinemora.tv.data.VOZES_OPENAI
 import br.com.cinemora.tv.data.VoiceMode
+import br.com.cinemora.tv.data.VoiceSpeed
 
 @Composable
 internal fun SettingsSection(
@@ -53,6 +57,10 @@ internal fun SettingsSection(
     onRefresh: () -> Unit,
     voiceMode: VoiceMode,
     onSetVoiceMode: (VoiceMode) -> Unit,
+    openAiVoice: String,
+    onSetOpenAiVoice: (String) -> Unit,
+    voiceSpeed: VoiceSpeed,
+    onSetVoiceSpeed: (VoiceSpeed) -> Unit,
 ) {
     var cleared by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
@@ -97,6 +105,24 @@ internal fun SettingsSection(
         Spacer(Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             VoiceMode.entries.forEach { modo -> Chip(modo.label(), modo == voiceMode) { onSetVoiceMode(modo) } }
+        }
+        if (voiceMode == VoiceMode.OPENAI) {
+            Spacer(Modifier.height(10.dp))
+            Text("Escolha a voz — ao selecionar, ela se apresenta.", color = Muted, fontSize = 12.sp)
+            Spacer(Modifier.height(6.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(VOZES_OPENAI) { voz ->
+                    Chip(voz.replaceFirstChar { it.uppercase() }, voz == openAiVoice) { onSetOpenAiVoice(voz) }
+                }
+            }
+        }
+        if (voiceMode != VoiceMode.MUDO) {
+            Spacer(Modifier.height(10.dp))
+            Text("VELOCIDADE DA FALA", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                VoiceSpeed.entries.forEach { v -> Chip(v.label(), v == voiceSpeed) { onSetVoiceSpeed(v) } }
+            }
         }
         Spacer(Modifier.height(18.dp))
         Text("ORDENAR OS TÍTULOS", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
@@ -148,6 +174,12 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
     ) {
         Text(label, color = if (selected) Color.White else Mist, fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal)
     }
+}
+
+private fun VoiceSpeed.label(): String = when (this) {
+    VoiceSpeed.LENTA -> "Lenta"
+    VoiceSpeed.NORMAL -> "Normal"
+    VoiceSpeed.RAPIDA -> "Rápida"
 }
 
 private fun VoiceMode.label(): String = when (this) {

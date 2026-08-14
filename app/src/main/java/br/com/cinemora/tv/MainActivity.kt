@@ -88,6 +88,10 @@ class MainActivity : ComponentActivity() {
                 onContinueFrom = viewModel::continueFrom,
                 voiceMode = viewModel.voiceMode,
                 onSetVoiceMode = viewModel::changeVoiceMode,
+                openAiVoice = viewModel.openAiVoice,
+                onSetOpenAiVoice = viewModel::changeOpenAiVoice,
+                voiceSpeed = viewModel.voiceSpeed,
+                onSetVoiceSpeed = viewModel::changeVoiceSpeed,
                 resumeEntry = viewModel.resumeEntry,
                 onResumeEntry = { entrada ->
                     viewModel.dismissResume()

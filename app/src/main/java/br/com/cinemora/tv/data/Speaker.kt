@@ -8,6 +8,14 @@ import java.util.Locale
 
 enum class VoiceMode { GOOGLE, OPENAI, MUDO }
 
+enum class VoiceSpeed(val fator: Float) { LENTA(0.8f), NORMAL(1f), RAPIDA(1.3f) }
+
+/** Vozes disponíveis na OpenAI (todas verificadas na conta). */
+val VOZES_OPENAI = listOf(
+    "alloy", "ash", "ballad", "coral", "echo", "fable",
+    "nova", "onyx", "sage", "shimmer", "verse", "marin", "cedar",
+)
+
 /**
  * Fala as respostas do chat. A voz do Google é instantânea e sem custo; a da OpenAI é mais
  * natural, porém depende de rede e cobra por caractere — daí a escolha ficar com o usuário.
@@ -16,6 +24,8 @@ class Speaker(
     private val context: Context,
     private val openAi: OpenAiClient,
     private val onFalando: (Boolean) -> Unit = {},
+    private val vozOpenAi: () -> String = { "alloy" },
+    private val velocidade: () -> VoiceSpeed = { VoiceSpeed.NORMAL },
 ) {
     private var tts: TextToSpeech? = null
     private var player: MediaPlayer? = null
@@ -57,6 +67,7 @@ class Speaker(
     private fun falarComGoogle(text: String) {
         val existente = tts
         if (existente != null) {
+            existente.setSpeechRate(velocidade().fator)
             existente.speak(text, TextToSpeech.QUEUE_FLUSH, null, FALA_ID)
             return
         }
@@ -64,6 +75,7 @@ class Speaker(
         tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 tts?.language = Locale("pt", "BR")
+                tts?.setSpeechRate(velocidade().fator)
                 tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) = avisar(true)
                     override fun onDone(utteranceId: String?) = avisar(false)
@@ -80,7 +92,7 @@ class Speaker(
         val pedido = System.currentTimeMillis()
         pedidoAtual = pedido
         rede.execute {
-            val audio = openAi.speech(text)
+            val audio = openAi.speech(text, vozOpenAi(), velocidade().fator)
             // Se outra fala começou nesse meio-tempo, esta é descartada.
             if (pedido != pedidoAtual) return@execute
             if (audio == null) {
