@@ -184,6 +184,9 @@ class PlayerActivity : ComponentActivity() {
         nextPanel.visibility = View.GONE
         autoNextEm = 0
         autoNextCancelado = false
+        // Registra assim que começa: gravar só na saída fazia o banner continuar
+        // apontando para o título anterior quando este era deixado antes dos 15s.
+        registrarNoHistorico(player.currentPosition, 0)
     }
 
     /** Toca o próximo da fila, marcando o atual como visto. */
@@ -360,16 +363,20 @@ class PlayerActivity : ComponentActivity() {
 
     /** Espelha o que está em andamento na linha "Continuar assistindo" do sistema. */
     private fun atualizarTelaInicial(position: Long, duration: Long) {
+        WatchNext.update(this, registrarNoHistorico(position, duration))
+    }
+
+    private fun registrarNoHistorico(position: Long, duration: Long): ResumeEntry {
         val entrada = ResumeEntry(
             id = streamUrl.hashCode().toString(),
             title = currentTitle,
             streamUrl = streamUrl,
             posterUrl = posterUrl,
-            positionMs = position,
+            positionMs = position.coerceAtLeast(0),
             durationMs = duration,
         )
         store.saveResumeEntries(ResumeRegistry.upsert(store.resumeEntries(), entrada))
-        WatchNext.update(this, entrada)
+        return entrada
     }
 
     private fun removerDaTelaInicial() {

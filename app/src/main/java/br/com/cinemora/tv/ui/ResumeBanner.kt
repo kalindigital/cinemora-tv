@@ -49,8 +49,10 @@ internal fun ResumeBanner(
         Text("Continuar assistindo", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         Spacer(Modifier.height(6.dp))
         Text(entry.title, color = Mist, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 2)
-        Spacer(Modifier.height(4.dp))
-        Text("Você parou em ${formatPosition(entry.positionMs)}.", color = Muted, fontSize = 13.sp)
+        if (entry.positionMs >= 60_000) {
+            Spacer(Modifier.height(4.dp))
+            Text("Você parou em ${formatPosition(entry.positionMs)}.", color = Muted, fontSize = 13.sp)
+        }
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ActionButton(
