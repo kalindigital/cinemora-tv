@@ -364,8 +364,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         speaker.speak(reply.text, voiceMode)
     }
 
-    private fun movieKeyOf(id: String) = "m:${'$'}id"
-    private fun seriesKeyOf(id: String) = "s:${'$'}id"
+    private fun movieKeyOf(id: String) = "m:$id"
+    private fun seriesKeyOf(id: String) = "s:$id"
 
     fun saveOpenAiKey(key: String) { repo.saveOpenAiKey(key); hasOpenAiKey = openAi.isConfigured() }
 
