@@ -18,6 +18,12 @@ object WatchNext {
         private set
 
     fun update(context: Context, entry: ResumeEntry) {
+        // O launcher descarta cartões "continuar" sem progresso real: sem duração ou em 0s
+        // não há o que continuar, então nem publicamos.
+        if (entry.durationMs <= 0 || entry.positionMs <= 0) {
+            lastStatus = "aguardando progresso (posição ${entry.positionMs / 1000}s, duração ${entry.durationMs / 1000}s)"
+            return
+        }
         val resultado = runCatching {
             val builder = WatchNextProgram.Builder()
                 .setType(TvContractCompat.WatchNextPrograms.TYPE_MOVIE)
@@ -28,7 +34,11 @@ object WatchNext {
                 .setInternalProviderId(entry.id)
                 .setIntentUri(Uri.parse(resumeUri(context, entry.id)))
             if (entry.durationMs > 0) builder.setDurationMillis(entry.durationMs.toInt())
-            entry.posterUrl?.let { builder.setPosterArtUri(Uri.parse(it)) }
+            // A capa é retrato 2:3; sem declarar isso o launcher espera 16:9 e ignora o cartão.
+            entry.posterUrl?.let {
+                builder.setPosterArtUri(Uri.parse(it))
+                    .setPosterArtAspectRatio(TvContractCompat.PreviewPrograms.ASPECT_RATIO_MOVIE_POSTER)
+            }
 
             val values: ContentValues = builder.build().toContentValues()
             // A consulta é isolada: quando ela falhava, a exceção abortava a inserção

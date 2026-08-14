@@ -51,15 +51,15 @@ internal fun SettingsSection(
     onRefresh: () -> Unit,
 ) {
     var cleared by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(40.dp)) {
-        Text("Definições", color = Mist, fontSize = 30.sp, fontWeight = FontWeight.ExtraBold)
-        Spacer(Modifier.height(28.dp))
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 40.dp, top = 22.dp, end = 40.dp, bottom = 32.dp)) {
+        Text("Definições", color = Mist, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
+        Spacer(Modifier.height(18.dp))
         Text("TELA INICIAL DA TV", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(6.dp))
         Text("Cartão \"Continuar assistindo\": ${WatchNext.lastStatus}", color = Muted, fontSize = 13.sp)
-        Spacer(Modifier.height(30.dp))
+        Spacer(Modifier.height(18.dp))
         Text("VERSÃO DO APP", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(6.dp))
         Text(
             when (updateState) {
                 is UpdateState.Available -> "Nova versão ${updateState.info.version} disponível."
@@ -76,24 +76,24 @@ internal fun SettingsSection(
             }
             ActionButton("Buscar atualização", onClick = onCheckUpdate)
         }
-        Spacer(Modifier.height(30.dp))
+        Spacer(Modifier.height(18.dp))
         Text("RECOMENDAÇÃO POR IA", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(6.dp))
         Text(
             if (hasOpenAiKey) "Chave da OpenAI configurada." else "Sem chave configurada — a busca por IA fica indisponível.",
             color = if (hasOpenAiKey) Signal else Muted, fontSize = 13.sp,
         )
         Spacer(Modifier.height(10.dp))
         ActionButton(if (hasOpenAiKey) "Trocar chave (QR code)" else "Configurar chave (QR code)", onClick = onConfigureKey)
-        Spacer(Modifier.height(30.dp))
+        Spacer(Modifier.height(18.dp))
         Text("ORDENAR OS TÍTULOS", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             SortOrder.entries.forEach { order -> Chip(order.label(), order == sortOrder) { onSetSortOrder(order) } }
         }
-        Spacer(Modifier.height(30.dp))
+        Spacer(Modifier.height(18.dp))
         Text("VALIDADE DO CACHE", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             CacheTtl.entries.forEach { ttl -> Chip(ttl.label(), ttl == cacheTtl) { onSetCacheTtl(ttl) } }
         }
@@ -102,9 +102,9 @@ internal fun SettingsSection(
             "Dentro da validade, o catálogo abre instantâneo do disco. Vencido, é rebuscado do servidor.",
             color = Muted, fontSize = 13.sp, lineHeight = 19.sp,
         )
-        Spacer(Modifier.height(30.dp))
+        Spacer(Modifier.height(18.dp))
         Text("LISTA / CACHE", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = onRefresh, colors = ButtonDefaults.buttonColors(containerColor = Coral, contentColor = Color.White)) {
                 Text("Atualizar agora", fontWeight = FontWeight.Medium)
