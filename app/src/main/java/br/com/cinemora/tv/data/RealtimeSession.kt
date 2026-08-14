@@ -45,6 +45,10 @@ class RealtimeSession(
     private var gravador: AudioRecord? = null
     private var alto: AudioTrack? = null
     @Volatile private var ativo = false
+    @Volatile private var falandoAgora = false
+    // Fila de reprodução: escrever direto no AudioTrack em modo não bloqueante descartava
+    // pedaços quando o buffer enchia, e a fala saía acelerada e picotada.
+    private val fila = java.util.concurrent.LinkedBlockingQueue<ByteArray>()
 
     fun start() {
         if (ativo) return
@@ -58,6 +62,8 @@ class RealtimeSession(
 
     fun stop() {
         ativo = false
+        fila.clear()
+        falandoAgora = false
         runCatching { socket?.close(1000, "fim") }
         socket = null
         runCatching { gravador?.stop(); gravador?.release() }
@@ -116,6 +122,9 @@ class RealtimeSession(
             while (ativo) {
                 val lidos = record.read(buffer, 0, buffer.size)
                 if (lidos <= 0) continue
+                // Enquanto ela fala, o microfone não envia: na TV o alto-falante volta
+                // para o microfone e ela se interrompia sozinha.
+                if (falandoAgora) continue
                 val audio = Base64.encodeToString(buffer.copyOf(lidos), Base64.NO_WRAP)
                 ws.send(JSONObject().put("type", "input_audio_buffer.append").put("audio", audio).toString())
             }
@@ -123,6 +132,10 @@ class RealtimeSession(
     }
 
     private fun tocar(pcm: ByteArray) {
+        fila.offer(pcm)
+    }
+
+    private fun abrirSaida() {
         val track = alto ?: AudioTrack.Builder()
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -138,16 +151,36 @@ class RealtimeSession(
                     .build(),
             )
             .setTransferMode(AudioTrack.MODE_STREAM)
-            .setBufferSizeInBytes(BUFFER * 4)
+            .setBufferSizeInBytes(BUFFER * 8)
             .build()
             .also { alto = it; it.play() }
-        runCatching { track.write(pcm, 0, pcm.size, AudioTrack.WRITE_NON_BLOCKING) }
+
+        thread(isDaemon = true, name = "cinemora-fala") {
+            while (ativo) {
+                val pedaco = runCatching { fila.poll(200, TimeUnit.MILLISECONDS) }.getOrNull()
+                if (pedaco == null) {
+                    falandoAgora = false
+                    continue
+                }
+                falandoAgora = true
+                var escrito = 0
+                // Bloqueante e em laço: só sai daqui quando todo o pedaço tocou.
+                while (escrito < pedaco.size && ativo) {
+                    val n = runCatching {
+                        track.write(pedaco, escrito, pedaco.size - escrito, AudioTrack.WRITE_BLOCKING)
+                    }.getOrDefault(-1)
+                    if (n <= 0) break
+                    escrito += n
+                }
+            }
+        }
     }
 
     private inner class Ouvinte : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             onEvent(RealtimeEvent.Conectado)
             configurar(webSocket)
+            abrirSaida()
             abrirMicrofone(webSocket)
         }
 

@@ -30,7 +30,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Send
-import androidx.compose.material.icons.rounded.VolumeOff
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -186,6 +186,21 @@ internal fun ChatScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                // Enquanto ela lê, o próprio microfone vira o botão de parar: assim nenhum
+                // botão novo aparece e a linha não muda de tamanho.
+                if (speaking) {
+                    IconActionButton(
+                        Icons.Rounded.Stop,
+                        "Parar leitura",
+                        modifier = Modifier.focusRequester(micFoco),
+                        onClick = onStopSpeech,
+                    )
+                } else {
+                    IconActionButton(Icons.Rounded.Mic, "Falar", modifier = Modifier.focusRequester(micFoco)) {
+                        ouvindo = true
+                    }
+                }
+                IconActionButton(Icons.Rounded.GraphicEq, "Conversa ao vivo", onClick = onStartLive)
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
@@ -198,10 +213,7 @@ internal fun ChatScreen(
                     ),
                     modifier = Modifier.weight(1f).focusRequester(campoFoco).dpadFocusNav(focusManager),
                 )
-                IconActionButton(Icons.Rounded.Mic, "Falar", modifier = Modifier.focusRequester(micFoco)) { ouvindo = true }
-                IconActionButton(Icons.Rounded.GraphicEq, "Conversa ao vivo", onClick = onStartLive)
                 IconActionButton(Icons.Rounded.Send, "Enviar") { onSend(query); query = "" }
-                if (speaking) IconActionButton(Icons.Rounded.VolumeOff, "Parar leitura", onClick = onStopSpeech)
             }
         }
     }
