@@ -3,7 +3,11 @@ package br.com.cinemora.tv
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
@@ -13,6 +17,9 @@ import br.com.cinemora.tv.ui.CinemoraApp
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
+    private var confirmandoSaida = false
+    private val limparConfirmacao = Runnable { confirmandoSaida = false }
+    private val ui = Handler(Looper.getMainLooper())
     private val playerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val terminou = result.resultCode == Activity.RESULT_OK &&
             result.data?.getBooleanExtra(PlayerActivity.EXTRA_FINISHED, false) == true
@@ -22,6 +29,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Sair pede confirmação: um Voltar sem querer não deve fechar o app.
+        // As telas internas (detalhe, QR, recomendações) tratam o Voltar antes disto.
+        onBackPressedDispatcher.addCallback(this) {
+            if (!confirmandoSaida) {
+                confirmandoSaida = true
+                Toast.makeText(this@MainActivity, "Pressione Voltar novamente para sair", Toast.LENGTH_SHORT).show()
+                ui.postDelayed(limparConfirmacao, CONFIRMACAO_MS)
+            } else {
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+            }
+        }
         setContent {
             CinemoraApp(
                 state = viewModel.state,
@@ -78,6 +97,11 @@ class MainActivity : ComponentActivity() {
         viewModel.refreshResume()
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        ui.removeCallbacks(limparConfirmacao)
+    }
+
     private fun play(title: String, url: String, restart: Boolean, poster: String?) =
         playerLauncher.launch(playerIntent(title, url, restart, poster))
 
@@ -105,4 +129,8 @@ class MainActivity : ComponentActivity() {
             putExtra(PlayerActivity.EXTRA_URL, url)
             putExtra(PlayerActivity.EXTRA_POSTER, poster)
         }
+
+    private companion object {
+        const val CONFIRMACAO_MS = 3_000L
+    }
 }
