@@ -32,6 +32,7 @@ object WatchNext {
                 .setLastPlaybackPositionMillis(entry.positionMs.toInt())
                 .setLastEngagementTimeUtcMillis(System.currentTimeMillis())
                 .setInternalProviderId(entry.id)
+                .setContentId(entry.id)
                 .setIntentUri(Uri.parse(resumeUri(context, entry.id)))
             if (entry.durationMs > 0) builder.setDurationMillis(entry.durationMs.toInt())
             // A capa é retrato 2:3; sem declarar isso o launcher espera 16:9 e ignora o cartão.
@@ -54,8 +55,10 @@ object WatchNext {
                 )
             }
         }
+        val hora = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
         lastStatus = resultado.fold(
-            onSuccess = { "publicado às ${java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}" },
+            // Relemos a fila: se a linha está lá e o cartão não aparece, o filtro é do launcher.
+            onSuccess = { "gravado às $hora — ${contarCartoes(context)} na fila do sistema" },
             onFailure = { "falhou: ${it::class.java.simpleName} — ${it.message.orEmpty().take(120)}" },
         )
     }
@@ -72,6 +75,14 @@ object WatchNext {
 
     /** O cartão aponta para um id interno; a URL do stream fica guardada no app. */
     private fun resumeUri(context: Context, id: String) = "cinemora://${context.packageName}/resume/$id"
+
+    /** Quantos cartões nossos o sistema realmente guardou. */
+    private fun contarCartoes(context: Context): String = runCatching {
+        val cursor = context.contentResolver.query(
+            TvContractCompat.WatchNextPrograms.CONTENT_URI, null, null, null, null,
+        ) ?: return "sem acesso à fila"
+        cursor.use { "${it.count} cartão(ões)" }
+    }.getOrElse { "leitura falhou (${it::class.java.simpleName})" }
 
     private fun findId(context: Context, internalId: String): Long? {
         val cursor = context.contentResolver.query(
