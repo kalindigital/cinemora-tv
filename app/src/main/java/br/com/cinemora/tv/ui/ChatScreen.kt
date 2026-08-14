@@ -104,6 +104,7 @@ internal fun ChatScreen(
 
     // Sair da aba (ou do app) interrompe a leitura em andamento.
     DisposableEffect(Unit) { onDispose { onStopSpeech() } }
+    BackHandler(enabled = liveActive, onBack = onStopLive)
 
     // Conversa nova abre no microfone; depois dele o foco vai para o campo de texto.
     LaunchedEffect(session?.id) {
@@ -144,11 +145,6 @@ internal fun ChatScreen(
         return
     }
 
-    if (liveActive) {
-        AoVivo(liveStatus, session, catalog, onOpenMovie, onOpenSeries, onStopLive)
-        return
-    }
-
     if (ouvindo) {
         VoiceOverlay(
             onResult = { falado -> ouvindo = false; query = ""; onSend(falado) },
@@ -160,6 +156,17 @@ internal fun ChatScreen(
     Row(Modifier.fillMaxSize()) {
         ConversasAnteriores(sessions, session, onNewChat, onOpenChat) { apagar = it }
         Column(Modifier.weight(1f).fillMaxHeight().padding(start = 20.dp, end = 32.dp)) {
+            if (liveActive) {
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text("Conversa ao vivo", color = Mist, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(liveStatus ?: "conectando…", color = Signal, fontSize = 13.sp)
+                    Text("· pode falar naturalmente", color = Muted, fontSize = 12.sp)
+                }
+            }
             LazyColumn(
                 Modifier.weight(1f),
                 state = listState,
@@ -180,6 +187,17 @@ internal fun ChatScreen(
                 }
                 if (thinking) item { Text("Pensando…", color = Muted, fontSize = 14.sp) }
                 if (error != null) item { Text(error, color = Signal, fontSize = 14.sp) }
+            }
+            if (liveActive) {
+                // Ao vivo não tem o que digitar: a barra vira só o encerrar, no mesmo lugar.
+                Row(Modifier.fillMaxWidth().padding(bottom = 18.dp)) {
+                    ActionButton(
+                        "Encerrar conversa",
+                        modifier = Modifier.focusRequester(micFoco),
+                        onClick = onStopLive,
+                    )
+                }
+                return@Column
             }
             Row(
                 Modifier.fillMaxWidth().padding(bottom = 18.dp),
@@ -216,49 +234,6 @@ internal fun ChatScreen(
                 IconActionButton(Icons.Rounded.Send, "Enviar") { onSend(query); query = "" }
             }
         }
-    }
-}
-
-/** Tela da conversa ao vivo: o microfone fica aberto e a resposta sai em áudio contínuo. */
-@Composable
-private fun AoVivo(
-    status: String?,
-    session: ChatSession?,
-    catalog: Catalog,
-    onOpenMovie: (Video) -> Unit,
-    onOpenSeries: (Series) -> Unit,
-    onStop: () -> Unit,
-) {
-    BackHandler(onBack = onStop)
-    val encerrar = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { encerrar.requestFocus() } }
-    val ultimas = session?.messages.orEmpty().takeLast(4)
-
-    Column(
-        Modifier.fillMaxSize().background(Ink).padding(40.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text("Conversa ao vivo", color = Mist, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(6.dp))
-        Text(status ?: "conectando…", color = Signal, fontSize = 14.sp)
-        Spacer(Modifier.height(6.dp))
-        Text("Pode falar naturalmente — ela responde sozinha quando você pausa.", color = Muted, fontSize = 13.sp)
-        Spacer(Modifier.height(20.dp))
-        Column(Modifier.weight(1f).fillMaxWidth()) {
-            ultimas.forEach { mensagem ->
-                Text(
-                    (if (mensagem.role == ChatRole.USER) "Você: " else "IA: ") + mensagem.text,
-                    color = if (mensagem.role == ChatRole.USER) Muted else Mist,
-                    fontSize = 15.sp,
-                    lineHeight = 21.sp,
-                    modifier = Modifier.padding(bottom = 8.dp),
-                )
-                if (mensagem.titles.isNotEmpty()) {
-                    Sugestoes(mensagem.titles, catalog, onOpenMovie, onOpenSeries)
-                }
-            }
-        }
-        ActionButton("Encerrar conversa", modifier = Modifier.focusRequester(encerrar), onClick = onStop)
     }
 }
 
