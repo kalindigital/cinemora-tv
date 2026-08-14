@@ -12,7 +12,11 @@ enum class VoiceMode { GOOGLE, OPENAI, MUDO }
  * Fala as respostas do chat. A voz do Google é instantânea e sem custo; a da OpenAI é mais
  * natural, porém depende de rede e cobra por caractere — daí a escolha ficar com o usuário.
  */
-class Speaker(private val context: Context, private val openAi: OpenAiClient) {
+class Speaker(
+    private val context: Context,
+    private val openAi: OpenAiClient,
+    private val onFalando: (Boolean) -> Unit = {},
+) {
     private var tts: TextToSpeech? = null
     private var player: MediaPlayer? = null
     // A voz da OpenAI é uma chamada de rede: na thread principal o Android a bloqueia,
@@ -23,6 +27,7 @@ class Speaker(private val context: Context, private val openAi: OpenAiClient) {
     fun speak(text: String, mode: VoiceMode) {
         if (text.isBlank() || mode == VoiceMode.MUDO) return
         stop()
+        avisar(true)
         when (mode) {
             VoiceMode.GOOGLE -> falarComGoogle(text)
             VoiceMode.OPENAI -> falarComOpenAi(text)
@@ -35,6 +40,11 @@ class Speaker(private val context: Context, private val openAi: OpenAiClient) {
         runCatching { tts?.stop() }
         runCatching { player?.stop(); player?.release() }
         player = null
+        avisar(false)
+    }
+
+    private fun avisar(falando: Boolean) {
+        android.os.Handler(android.os.Looper.getMainLooper()).post { onFalando(falando) }
     }
 
     fun release() {
@@ -54,7 +64,14 @@ class Speaker(private val context: Context, private val openAi: OpenAiClient) {
         tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 tts?.language = Locale("pt", "BR")
+                tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) = avisar(true)
+                    override fun onDone(utteranceId: String?) = avisar(false)
+                    @Deprecated("callback antigo") override fun onError(utteranceId: String?) = avisar(false)
+                })
                 tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, FALA_ID)
+            } else {
+                avisar(false)
             }
         }
     }
@@ -74,7 +91,7 @@ class Speaker(private val context: Context, private val openAi: OpenAiClient) {
                 val arquivo = File(context.cacheDir, "fala-$pedido.mp3").apply { writeBytes(audio) }
                 val novo = MediaPlayer().apply {
                     setDataSource(arquivo.absolutePath)
-                    setOnCompletionListener { it.release(); arquivo.delete() }
+                    setOnCompletionListener { it.release(); arquivo.delete(); avisar(false) }
                     prepare()
                 }
                 if (pedido != pedidoAtual) {

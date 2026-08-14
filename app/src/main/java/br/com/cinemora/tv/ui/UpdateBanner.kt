@@ -1,5 +1,6 @@
 package br.com.cinemora.tv.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +39,8 @@ internal fun UpdateBanner(
         else -> return
     }
     val baixando = state as? UpdateState.Downloading
+    // Voltar apenas oculta o aviso; sair do app exigiria um segundo Voltar.
+    BackHandler(enabled = baixando == null, onBack = onDismiss)
     // Nas telas com fileiras o D-pad percorre os cartões e nunca alcançava o banner:
     // ao aparecer, ele mesmo assume o foco.
     val atualizarFoco = remember { FocusRequester() }

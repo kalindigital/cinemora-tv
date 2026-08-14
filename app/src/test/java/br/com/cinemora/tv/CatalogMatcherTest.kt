@@ -36,6 +36,27 @@ class CatalogMatcherTest {
         assertEquals(1, result.movies.size)
     }
 
+    @Test fun `titulo curto do catalogo nao casa dentro de uma sugestao longa`() {
+        // Era assim que 007 e outros entravam em pedidos da Marvel.
+        val comCurtos = catalog.copy(movies = catalog.movies + movie("9", "Guerra"))
+        val result = CatalogMatcher.match(listOf("Capitão América: Guerra Civil"), comCurtos)
+        assertTrue(result.movies.isEmpty())
+    }
+
+    @Test fun `prefere o titulo exato ao parecido`() {
+        val comParecidos = catalog.copy(
+            movies = listOf(movie("10", "A Origem do Mal (2022)"), movie("11", "A Origem (2010) [4K]")),
+        )
+        val result = CatalogMatcher.match(listOf("A Origem"), comParecidos)
+        assertEquals(listOf("11"), result.movies.map { it.id })
+    }
+
+    @Test fun `casa pelo comeco do titulo quando o catalogo traz subtitulo`() {
+        val comSubtitulo = catalog.copy(movies = listOf(movie("12", "Harry Potter e o Enigma do Príncipe (2009)")))
+        val result = CatalogMatcher.match(listOf("Harry Potter e o Enigma do Príncipe"), comSubtitulo)
+        assertEquals(listOf("12"), result.movies.map { it.id })
+    }
+
     @Test fun `ignora sugestoes curtas demais para evitar falsos positivos`() {
         val result = CatalogMatcher.match(listOf("a", "o"), catalog)
         assertTrue(result.movies.isEmpty())

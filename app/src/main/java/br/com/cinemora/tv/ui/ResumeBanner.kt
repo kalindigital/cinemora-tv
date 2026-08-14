@@ -1,5 +1,6 @@
 package br.com.cinemora.tv.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +36,8 @@ internal fun ResumeBanner(
     modifier: Modifier = Modifier,
 ) {
     if (entry == null) return
+    // Sem isto, Voltar com o foco no banner tentava sair do app.
+    BackHandler(onBack = onDismiss)
     // Nas fileiras o D-pad percorre os cartões e nunca chega ao banner: ele assume o foco.
     val continuarFoco = remember { FocusRequester() }
     LaunchedEffect(entry.id) { runCatching { continuarFoco.requestFocus() } }

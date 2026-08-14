@@ -66,7 +66,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = CinemoraRepository(LocalStore(app))
     private val openAi = OpenAiClient(keyProvider = { repo.openAiKey() })
     private val updates = UpdateService(app)
-    private val speaker = Speaker(app, openAi)
+    private val speaker = Speaker(app, openAi) { falando -> speaking = falando }
     var state: AppState by mutableStateOf(AppState.Login)
         private set
     var seriesDetail: DetailState by mutableStateOf(DetailState.Idle)
@@ -89,6 +89,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var chatError: String? by mutableStateOf(null)
         private set
     var voiceMode: VoiceMode by mutableStateOf(VoiceMode.GOOGLE)
+        private set
+    var speaking: Boolean by mutableStateOf(false)
         private set
     var sortOrder: SortOrder by mutableStateOf(repo.sortOrder())
         private set
@@ -300,6 +302,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (mode == VoiceMode.MUDO) speaker.stop()
     }
 
+    fun stopSpeech() { speaker.stop() }
+
+    /** Reler uma resposta já recebida, sem gastar nova chamada. */
+    fun speakAgain(text: String) { speaker.speak(text, voiceMode) }
+
+    /** Retoma a conversa a partir de uma pergunta antiga, descartando o que veio depois. */
+    fun continueFrom(index: Int) {
+        val sessao = currentChat ?: return
+        val pergunta = sessao.messages.getOrNull(index)?.takeIf { it.role == ChatRole.USER } ?: return
+        currentChat = sessao.copy(messages = sessao.messages.take(index))
+        sendChat(pergunta.text)
+    }
+
     fun newChat() { currentChat = null; chatError = null; speaker.stop() }
 
     fun openChat(session: ChatSession) { currentChat = session; chatError = null }
@@ -350,9 +365,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun registrarResposta(sessao: ChatSession, reply: ChatReply, catalog: Catalog?) {
         // Só sugerimos o que existe no catálogo: o resto viraria clique sem destino.
         val disponiveis = catalog?.let { CatalogMatcher.match(reply.titles, it) }
+        // Pedido de filme não deve trazer série (e vice-versa).
         val titulos = buildList {
-            disponiveis?.movies?.forEach { add(movieKeyOf(it.id)) }
-            disponiveis?.series?.forEach { add(seriesKeyOf(it.id)) }
+            if (reply.type != "serie") disponiveis?.movies?.forEach { add(movieKeyOf(it.id)) }
+            if (reply.type != "filme") disponiveis?.series?.forEach { add(seriesKeyOf(it.id)) }
         }
         val atualizada = sessao.copy(
             messages = sessao.messages + ChatMessage(ChatRole.ASSISTANT, reply.text, titulos),

@@ -7,7 +7,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /** Resposta da conversa: texto exibido/falado e títulos sugeridos. */
-data class ChatReply(val text: String, val titles: List<String>)
+data class ChatReply(val text: String, val titles: List<String>, val type: String = "ambos")
 
 /**
  * Recomendação por IA. O catálogo tem dezenas de milhares de títulos, então não é enviado:
@@ -124,9 +124,14 @@ class OpenAiClient(
                                     "titulos",
                                     JSONObject().put("type", "array")
                                         .put("items", JSONObject().put("type", "string")),
+                                )
+                                .put(
+                                    "tipo",
+                                    JSONObject().put("type", "string")
+                                        .put("enum", JSONArray().put("filme").put("serie").put("ambos")),
                                 ),
                         )
-                        .put("required", JSONArray().put("resposta").put("titulos"))
+                        .put("required", JSONArray().put("resposta").put("titulos").put("tipo"))
                         .put("additionalProperties", false),
                 )
 
@@ -154,6 +159,7 @@ class OpenAiClient(
             return ChatReply(
                 text = conteudo.optString("resposta"),
                 titles = List(titulos.length()) { titulos.optString(it) }.filter { it.isNotBlank() },
+                type = conteudo.optString("tipo").ifBlank { "ambos" },
             )
         }
 

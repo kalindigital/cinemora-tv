@@ -2,7 +2,10 @@ package br.com.cinemora.tv.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,9 +29,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Send
+import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,11 +69,16 @@ internal fun ChatScreen(
     sessions: List<ChatSession>,
     thinking: Boolean,
     error: String?,
+    speaking: Boolean,
+    onStopSpeech: () -> Unit,
     hasKey: Boolean,
     onConfigureKey: () -> Unit,
     onSend: (String) -> Unit,
     onNewChat: () -> Unit,
     onOpenChat: (ChatSession) -> Unit,
+    onDeleteChat: (ChatSession) -> Unit,
+    onSpeakAgain: (String) -> Unit,
+    onContinueFrom: (Int) -> Unit,
     onOpenMovie: (Video) -> Unit,
     onOpenSeries: (Series) -> Unit,
 ) {
@@ -78,11 +88,16 @@ internal fun ChatScreen(
     val focusManager = LocalFocusManager.current
     val campoFoco = remember { FocusRequester() }
     val listState = rememberLazyListState()
+    var retomarDe by remember { mutableStateOf<Int?>(null) }
+    var apagar by remember { mutableStateOf<ChatSession?>(null) }
 
     if (!hasKey) {
         SemChave(onConfigureKey)
         return
     }
+
+    // Sair da aba (ou do app) interrompe a leitura em andamento.
+    DisposableEffect(Unit) { onDispose { onStopSpeech() } }
 
     // Conversa nova abre no microfone; depois dele o foco vai para o campo de texto.
     LaunchedEffect(session?.id) {
@@ -99,6 +114,28 @@ internal fun ChatScreen(
         if (total > 0) listState.animateScrollToItem(total - 1)
     }
 
+    retomarDe?.let { indice ->
+        Confirmacao(
+            titulo = "Continuar a partir desta pergunta?",
+            detalhe = "As mensagens seguintes desta conversa serão descartadas.",
+            acao = "Continuar daqui",
+            onConfirmar = { retomarDe = null; onContinueFrom(indice) },
+            onCancelar = { retomarDe = null },
+        )
+        return
+    }
+
+    apagar?.let { sessao ->
+        Confirmacao(
+            titulo = "Apagar \"${sessao.title}\"?",
+            detalhe = "A conversa some da lista e não dá para recuperar.",
+            acao = "Apagar",
+            onConfirmar = { apagar = null; onDeleteChat(sessao) },
+            onCancelar = { apagar = null },
+        )
+        return
+    }
+
     if (ouvindo) {
         VoiceOverlay(
             onResult = { falado -> ouvindo = false; query = ""; onSend(falado) },
@@ -108,7 +145,7 @@ internal fun ChatScreen(
     }
 
     Row(Modifier.fillMaxSize()) {
-        ConversasAnteriores(sessions, session, onNewChat, onOpenChat)
+        ConversasAnteriores(sessions, session, onNewChat, onOpenChat) { apagar = it }
         Column(Modifier.weight(1f).fillMaxHeight().padding(start = 20.dp, end = 32.dp)) {
             LazyColumn(
                 Modifier.weight(1f),
@@ -121,7 +158,12 @@ internal fun ChatScreen(
                 }
                 items(session?.messages.orEmpty().size) { index ->
                     val message = session!!.messages[index]
-                    Mensagem(message, catalog, onOpenMovie, onOpenSeries)
+                    Mensagem(
+                        message, catalog, onOpenMovie, onOpenSeries,
+                        onClick = {
+                            if (message.role == ChatRole.ASSISTANT) onSpeakAgain(message.text) else retomarDe = index
+                        },
+                    )
                 }
                 if (thinking) item { Text("Pensando…", color = Muted, fontSize = 14.sp) }
                 if (error != null) item { Text(error, color = Signal, fontSize = 14.sp) }
@@ -143,8 +185,9 @@ internal fun ChatScreen(
                     ),
                     modifier = Modifier.weight(1f).focusRequester(campoFoco).dpadFocusNav(focusManager),
                 )
-                ActionButton("Falar", icon = Icons.Rounded.Mic) { ouvindo = true }
-                ActionButton("Enviar", icon = Icons.Rounded.Send) { onSend(query); query = "" }
+                IconActionButton(Icons.Rounded.Mic, "Falar") { ouvindo = true }
+                IconActionButton(Icons.Rounded.Send, "Enviar") { onSend(query); query = "" }
+                if (speaking) IconActionButton(Icons.Rounded.VolumeOff, "Parar leitura", onClick = onStopSpeech)
             }
         }
     }
@@ -170,18 +213,41 @@ private fun Mensagem(
     catalog: Catalog,
     onOpenMovie: (Video) -> Unit,
     onOpenSeries: (Series) -> Unit,
+    onClick: () -> Unit,
 ) {
     val doUsuario = message.role == ChatRole.USER
+    var focused by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth()) {
         Box(
             Modifier.align(if (doUsuario) Alignment.End else Alignment.Start)
                 .widthIn(max = 620.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(if (doUsuario) Coral.copy(alpha = 0.18f) else Panel)
-                .border(1.dp, if (doUsuario) Coral.copy(alpha = 0.4f) else Edge, RoundedCornerShape(14.dp))
+                .border(
+                    if (focused) 2.dp else 1.dp,
+                    when {
+                        focused -> Coral
+                        doUsuario -> Coral.copy(alpha = 0.4f)
+                        else -> Edge
+                    },
+                    RoundedCornerShape(14.dp),
+                )
+                // Focável de propósito: sem isso o D-pad saía do chat e a lista nunca rolava.
+                .onFocusChanged { focused = it.isFocused }
+                .clickable { onClick() }
+                .focusable()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
-            Text(message.text, color = Mist, fontSize = 15.sp, lineHeight = 21.sp)
+            Column {
+                Text(message.text, color = Mist, fontSize = 15.sp, lineHeight = 21.sp)
+                if (focused) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        if (doUsuario) "OK para continuar a partir daqui" else "OK para ouvir de novo",
+                        color = Muted, fontSize = 11.sp,
+                    )
+                }
+            }
         }
         if (message.titles.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
@@ -220,6 +286,7 @@ private fun ConversasAnteriores(
     atual: ChatSession?,
     onNewChat: () -> Unit,
     onOpenChat: (ChatSession) -> Unit,
+    onLongClick: (ChatSession) -> Unit,
 ) {
     Column(Modifier.width(230.dp).fillMaxHeight().padding(start = 32.dp, top = 16.dp, end = 4.dp)) {
         ActionButton("Nova conversa", icon = Icons.Rounded.Add, onClick = onNewChat)
@@ -229,31 +296,66 @@ private fun ConversasAnteriores(
         LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             items(sessions.size) { index ->
                 val sessao = sessions[index]
-                ConversaItem(sessao.title, sessao.id == atual?.id) { onOpenChat(sessao) }
+                ConversaItem(
+                    sessao.title,
+                    sessao.id == atual?.id,
+                    onClick = { onOpenChat(sessao) },
+                    onLongClick = { onLongClick(sessao) },
+                )
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ConversaItem(title: String, selecionada: Boolean, onClick: () -> Unit) {
+private fun ConversaItem(
+    title: String,
+    selecionada: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
     var focused by remember { mutableStateOf(false) }
     Box(
         Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(if (focused) Coral else if (selecionada) Panel else Color.Transparent)
             .onFocusChanged { focused = it.isFocused }
-            .clickable { onClick() }
+            // Segurar OK abre a opção de apagar.
+            .combinedClickable(onLongClick = onLongClick, onClick = onClick)
             .focusable()
             .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
-        Text(
-            title,
-            color = if (focused) Color.White else Mist,
-            fontSize = 13.sp,
-            maxLines = 2,
-            lineHeight = 17.sp,
-        )
+        Column {
+            Text(title, color = if (focused) Color.White else Mist, fontSize = 13.sp, maxLines = 2, lineHeight = 17.sp)
+            if (focused) Text("segure OK para apagar", color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp)
+        }
+    }
+}
+
+/** Confirmação em tela cheia, no padrão das outras telas do app. */
+@Composable
+private fun Confirmacao(
+    titulo: String,
+    detalhe: String,
+    acao: String,
+    onConfirmar: () -> Unit,
+    onCancelar: () -> Unit,
+) {
+    BackHandler(onBack = onCancelar)
+    val foco = remember { FocusRequester() }
+    LaunchedEffect(titulo) { runCatching { foco.requestFocus() } }
+    Box(Modifier.fillMaxSize().background(Ink), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(titulo, color = Mist, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            Text(detalhe, color = Muted, fontSize = 14.sp)
+            Spacer(Modifier.height(22.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionButton(acao, modifier = Modifier.focusRequester(foco), onClick = onConfirmar)
+                ActionButton("Cancelar", onClick = onCancelar)
+            }
+        }
     }
 }
 
