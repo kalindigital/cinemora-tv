@@ -65,7 +65,7 @@ internal fun MovieDetail(
     isFavorite: Boolean,
     isWatched: Boolean,
     resumeMs: Long,
-    onPlay: (String, String, Boolean) -> Unit,
+    onPlay: (String, String, Boolean, String?) -> Unit,
     onRecordWatched: (String) -> Unit,
     onRemoveWatched: () -> Unit,
     onToggleFavorite: () -> Unit,
@@ -110,9 +110,9 @@ internal fun MovieDetail(
                         if (emAndamento) "Continuar" else "Assistir",
                         modifier = Modifier.focusRequester(playFocus),
                         icon = Icons.Rounded.PlayArrow,
-                    ) { onRecordWatched(video.id); onPlay(video.title, video.streamUrl, false) }
+                    ) { onRecordWatched(video.id); onPlay(video.title, video.streamUrl, false, video.coverUrl) }
                     if (emAndamento) {
-                        ActionButton("Reiniciar") { onRecordWatched(video.id); onPlay(video.title, video.streamUrl, true) }
+                        ActionButton("Reiniciar") { onRecordWatched(video.id); onPlay(video.title, video.streamUrl, true, video.coverUrl) }
                     }
                     FavoriteButton(isFavorite, onToggleFavorite)
                     ActionButton("Voltar", onClick = onClose)

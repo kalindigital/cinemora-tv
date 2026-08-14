@@ -71,13 +71,19 @@ class MainActivity : ComponentActivity() {
         viewModel.onPlaybackFinished()
     }
 
-    private fun play(title: String, url: String, restart: Boolean) =
-        playerLauncher.launch(playerIntent(title, url, restart))
+    private fun play(title: String, url: String, restart: Boolean, poster: String?) =
+        playerLauncher.launch(playerIntent(title, url, restart, poster))
 
     /** Série: leva a fila dos próximos episódios para o player oferecer "próximo". */
-    private fun playQueue(title: String, url: String, restart: Boolean, upcoming: List<Triple<String, String, String>>) {
+    private fun playQueue(
+        title: String,
+        url: String,
+        restart: Boolean,
+        poster: String?,
+        upcoming: List<Triple<String, String, String>>,
+    ) {
         playerLauncher.launch(
-            playerIntent(title, url, restart).apply {
+            playerIntent(title, url, restart, poster).apply {
                 putStringArrayListExtra(PlayerActivity.EXTRA_QUEUE_TITLES, ArrayList(upcoming.map { it.first }))
                 putStringArrayListExtra(PlayerActivity.EXTRA_QUEUE_URLS, ArrayList(upcoming.map { it.second }))
                 putStringArrayListExtra(PlayerActivity.EXTRA_QUEUE_LABELS, ArrayList(upcoming.map { it.third }))
@@ -85,10 +91,11 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    private fun playerIntent(title: String, url: String, restart: Boolean) =
+    private fun playerIntent(title: String, url: String, restart: Boolean, poster: String?) =
         Intent(this, PlayerActivity::class.java).apply {
             putExtra(PlayerActivity.EXTRA_RESTART, restart)
             putExtra(PlayerActivity.EXTRA_TITLE, title)
             putExtra(PlayerActivity.EXTRA_URL, url)
+            putExtra(PlayerActivity.EXTRA_POSTER, poster)
         }
 }

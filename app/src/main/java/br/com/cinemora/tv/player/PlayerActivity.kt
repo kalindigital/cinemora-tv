@@ -22,6 +22,9 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import br.com.cinemora.tv.data.LocalStore
+import br.com.cinemora.tv.data.ResumeEntry
+import br.com.cinemora.tv.data.ResumeRegistry
+import br.com.cinemora.tv.data.WatchNext
 
 /**
  * Player em View pura (sem Compose): dentro de um AndroidView o D-pad não chegava de
@@ -38,6 +41,7 @@ class PlayerActivity : ComponentActivity() {
 
     private var streamUrl = ""
     private var currentTitle = ""
+    private var posterUrl: String? = null
     private var queueTitles: List<String> = emptyList()
     private var queueUrls: List<String> = emptyList()
     private var queueLabels: List<String> = emptyList()
@@ -61,6 +65,7 @@ class PlayerActivity : ComponentActivity() {
         streamUrl = intent.getStringExtra(EXTRA_URL).orEmpty()
         require(streamUrl.isNotBlank()) { "Vídeo inválido." }
         currentTitle = intent.getStringExtra(EXTRA_TITLE).orEmpty()
+        posterUrl = intent.getStringExtra(EXTRA_POSTER)
         queueTitles = intent.getStringArrayListExtra(EXTRA_QUEUE_TITLES).orEmpty()
         queueUrls = intent.getStringArrayListExtra(EXTRA_QUEUE_URLS).orEmpty()
         queueLabels = intent.getStringArrayListExtra(EXTRA_QUEUE_LABELS).orEmpty()
@@ -184,6 +189,7 @@ class PlayerActivity : ComponentActivity() {
     private fun onPlaybackFinished() {
         store.markStreamWatched(streamUrl)
         store.clearPosition(streamUrl)
+        removerDaTelaInicial()
         if (queueIndex >= queueUrls.size) {
             // Filme (ou fim da série): a Home mostra as recomendações.
             store.saveFinishedStream(streamUrl)
@@ -322,8 +328,10 @@ class PlayerActivity : ComponentActivity() {
         val worthResuming = duration > 0 && position > RESUME_REWIND_MS && position < duration - FINISHED_MARGIN_MS
         if (worthResuming) {
             store.savePosition(streamUrl, position)
+            atualizarTelaInicial(position, duration)
         } else {
             store.clearPosition(streamUrl)
+            removerDaTelaInicial()
         }
         // Sair já no finzinho conta como assistido: quase ninguém vê os créditos até o fim.
         val quaseNoFim = duration > 0 && position >= duration * FINISHED_RATIO
@@ -333,8 +341,29 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    /** Espelha o que está em andamento na linha "Continuar assistindo" do sistema. */
+    private fun atualizarTelaInicial(position: Long, duration: Long) {
+        val entrada = ResumeEntry(
+            id = streamUrl.hashCode().toString(),
+            title = currentTitle,
+            streamUrl = streamUrl,
+            posterUrl = posterUrl,
+            positionMs = position,
+            durationMs = duration,
+        )
+        store.saveResumeEntries(ResumeRegistry.upsert(store.resumeEntries(), entrada))
+        WatchNext.update(this, entrada)
+    }
+
+    private fun removerDaTelaInicial() {
+        val id = streamUrl.hashCode().toString()
+        store.saveResumeEntries(ResumeRegistry.remove(store.resumeEntries(), id))
+        WatchNext.remove(this, id)
+    }
+
     companion object {
         const val EXTRA_URL = "video_url"
+        const val EXTRA_POSTER = "video_poster"
         const val EXTRA_TITLE = "video_title"
         const val EXTRA_RESTART = "video_restart"
         const val EXTRA_FINISHED = "video_finished"

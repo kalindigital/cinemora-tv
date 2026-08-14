@@ -92,6 +92,14 @@ class LocalStore(context: Context) {
         prefs.edit().putStringSet(KEY_WATCHED_STREAMS, atuais).apply()
     }
 
+    /** Títulos em andamento, espelhados na linha "Continuar assistindo" da TV. */
+    fun resumeEntries(): List<ResumeEntry> =
+        ResumeRegistry.decode(prefs.getString(KEY_RESUME, "[]").orEmpty())
+
+    fun saveResumeEntries(items: List<ResumeEntry>) {
+        prefs.edit().putString(KEY_RESUME, ResumeRegistry.encode(items)).apply()
+    }
+
     /** Sinal do player para a Home oferecer recomendações; sobrevive à Activity ser destruída. */
     fun saveFinishedStream(streamUrl: String) {
         prefs.edit().putString(KEY_FINISHED, streamUrl).apply()
@@ -131,5 +139,6 @@ class LocalStore(context: Context) {
         const val KEY_WATCHED_STREAMS = "watched_streams"
         const val KEY_FINISHED = "finished_stream"
         const val KEY_OPENAI = "openai_key"
+        const val KEY_RESUME = "resume_entries"
     }
 }

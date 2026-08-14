@@ -88,8 +88,8 @@ fun CinemoraApp(
     account: Credentials?,
     onSignIn: (String, String, String) -> Unit,
     onRetry: () -> Unit,
-    onPlay: (String, String, Boolean) -> Unit,
-    onPlayQueue: (String, String, Boolean, List<Triple<String, String, String>>) -> Unit,
+    onPlay: (String, String, Boolean, String?) -> Unit,
+    onPlayQueue: (String, String, Boolean, String?, List<Triple<String, String, String>>) -> Unit,
     onRecordWatched: (String) -> Unit,
     onRemoveWatched: (Video) -> Unit,
     onToggleFavorite: (String) -> Unit,
@@ -190,8 +190,8 @@ private fun HomeShell(
     sortOrder: SortOrder,
     cacheTtl: CacheTtl,
     account: Credentials?,
-    onPlay: (String, String, Boolean) -> Unit,
-    onPlayQueue: (String, String, Boolean, List<Triple<String, String, String>>) -> Unit,
+    onPlay: (String, String, Boolean, String?) -> Unit,
+    onPlayQueue: (String, String, Boolean, String?, List<Triple<String, String, String>>) -> Unit,
     onRecordWatched: (String) -> Unit,
     onRemoveWatched: (Video) -> Unit,
     onToggleFavorite: (String) -> Unit,
@@ -267,6 +267,7 @@ private fun HomeShell(
                     episodeTitle(series, episode),
                     episode.streamUrl,
                     reiniciar,
+                    series.coverUrl,
                     proximos.map { Triple(episodeTitle(series, it), it.streamUrl, "T${it.season} E${it.episode}") },
                 )
             },
@@ -287,9 +288,9 @@ private fun HomeShell(
                 when (section) {
                     Section.FILMES -> MoviesSection(home.catalog, home.userData, home.featured, featuredPlot, sortOrder) { openMovieId = it.id }
                     Section.SERIES -> SeriesSection(home.catalog, home.userData, home.featuredSeries, sortOrder) { openSeriesId = it.id }
-                    Section.CANAIS -> ChannelsSection(home.catalog) { onPlay(it.name, it.streamUrl, false) }
-                    Section.CATEGORIAS -> CategoriesSection(home.catalog, sortOrder, { openMovieId = it.id }, { openSeriesId = it.id }) { onPlay(it.name, it.streamUrl, false) }
-                    Section.PESQUISA -> SearchSection(home.catalog, { openMovieId = it.id }, { openSeriesId = it.id }) { onPlay(it.name, it.streamUrl, false) }
+                    Section.CANAIS -> ChannelsSection(home.catalog) { onPlay(it.name, it.streamUrl, false, it.logoUrl) }
+                    Section.CATEGORIAS -> CategoriesSection(home.catalog, sortOrder, { openMovieId = it.id }, { openSeriesId = it.id }) { onPlay(it.name, it.streamUrl, false, it.logoUrl) }
+                    Section.PESQUISA -> SearchSection(home.catalog, { openMovieId = it.id }, { openSeriesId = it.id }) { onPlay(it.name, it.streamUrl, false, it.logoUrl) }
                     Section.IA -> AiSection(
                         aiState,
                         hasOpenAiKey,
