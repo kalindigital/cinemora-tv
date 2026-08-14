@@ -346,7 +346,14 @@ private fun Confirmacao(
 ) {
     BackHandler(onBack = onCancelar)
     val foco = remember { FocusRequester() }
-    LaunchedEffect(titulo) { runCatching { foco.requestFocus() } }
+    // Segurar OK dispara o "soltar" já nesta tela e ativava o botão em foco sem querer:
+    // o foco começa em Cancelar e os cliques só valem depois de um instante.
+    var pronto by remember(titulo) { mutableStateOf(false) }
+    LaunchedEffect(titulo) {
+        runCatching { foco.requestFocus() }
+        kotlinx.coroutines.delay(500)
+        pronto = true
+    }
     Box(Modifier.fillMaxSize().background(Ink), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(titulo, color = Mist, fontSize = 21.sp, fontWeight = FontWeight.Bold)
@@ -354,8 +361,8 @@ private fun Confirmacao(
             Text(detalhe, color = Muted, fontSize = 14.sp)
             Spacer(Modifier.height(22.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                ActionButton(acao, modifier = Modifier.focusRequester(foco), onClick = onConfirmar)
-                ActionButton("Cancelar", onClick = onCancelar)
+                ActionButton(acao) { if (pronto) onConfirmar() }
+                ActionButton("Cancelar", modifier = Modifier.focusRequester(foco)) { if (pronto) onCancelar() }
             }
         }
     }
