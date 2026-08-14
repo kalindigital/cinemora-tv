@@ -385,17 +385,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun askVerdict(video: Video) = pedirInsight(video.title) {
         openAi.askText(
             OpenAiClient.PROMPT_VEREDITO,
-            "Filme: ${'$'}{video.title}. Vale a pena assistir?",
+            "Filme: ${video.title}. Vale a pena assistir?",
             comWeb = true,
         )
     }
 
     /** "Onde eu parei?" — resumo até o episódio anterior. */
     fun askRecap(series: Series, season: Int, episode: Int) =
-        pedirInsight("${'$'}{series.title} — até T${'$'}season E${'$'}{episode - 1}") {
+        pedirInsight("${series.title} — até T$season E${episode - 1}") {
             openAi.askText(
                 OpenAiClient.PROMPT_RESUMO,
-                "Série: ${'$'}{series.title}. Resuma até a temporada ${'$'}season, episódio ${'$'}{episode - 1}.",
+                "Série: ${series.title}. Resuma até a temporada $season, episódio ${episode - 1}.",
                 comWeb = true,
             )
         }
@@ -424,7 +424,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         val home = state as? AppState.Home ?: return
         val porId = home.catalog.movies.associateBy { it.id }
         val assistidos = home.userData.watched.mapNotNull { porId[it]?.title }
-        val favoritos = home.catalog.movies.filter { "m:${'$'}{it.id}" in home.userData.favorites }.map { it.title }
+        val favoritos = home.catalog.movies.filter { "m:${it.id}" in home.userData.favorites }.map { it.title }
         val base = (assistidos + favoritos).distinct().take(25)
         if (base.isEmpty()) {
             tasteProfile = "Assista ou favorite alguns títulos para eu conhecer seu gosto."

@@ -348,7 +348,7 @@ private fun ResumeChoice(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(titulo, color = Mist, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
-            Text("Você parou em ${'$'}{formatPosition(posicao)}.", color = Muted, fontSize = 14.sp)
+            Text("Você parou em ${formatPosition(posicao)}.", color = Muted, fontSize = 14.sp)
             Spacer(Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ActionButton("Continuar", modifier = Modifier.focusRequester(continuarFocus), icon = Icons.Rounded.PlayArrow, onClick = onContinuar)
