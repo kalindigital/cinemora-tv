@@ -70,6 +70,7 @@ internal fun ChatScreen(
     thinking: Boolean,
     error: String?,
     speaking: Boolean,
+    voiceStatus: String?,
     onStopSpeech: () -> Unit,
     hasKey: Boolean,
     onConfigureKey: () -> Unit,
@@ -167,6 +168,7 @@ internal fun ChatScreen(
                 }
                 if (thinking) item { Text("Pensando…", color = Muted, fontSize = 14.sp) }
                 if (error != null) item { Text(error, color = Signal, fontSize = 14.sp) }
+                if (voiceStatus != null) item { Text("voz: $voiceStatus", color = Muted, fontSize = 11.sp) }
             }
             Row(
                 Modifier.fillMaxWidth().padding(bottom = 18.dp),

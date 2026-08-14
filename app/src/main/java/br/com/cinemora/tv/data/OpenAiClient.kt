@@ -140,7 +140,13 @@ class OpenAiClient(
                 "de forma direta e amigável, em no máximo 3 frases — o texto será lido em voz alta. " +
                 "Pesquise na web quando a pergunta envolver lançamentos, novidades ou fatos recentes. " +
                 "Em 'titulos' coloque os filmes ou séries citados (título em português quando existir, sem o ano); " +
-                "deixe a lista vazia quando não estiver recomendando nada."
+                "deixe a lista vazia quando não estiver recomendando nada. " +
+                "Em 'tipo' informe 'filme' se pediram filmes, 'serie' se pediram séries e 'ambos' quando não " +
+                "especificarem; respeite isso também nos títulos sugeridos. " +
+                "NUNCA escreva links ou endereços de sites. " +
+                "Quando a mensagem trouxer '[Disponíveis no catálogo do usuário: ...]', trate esses títulos como " +
+                "o que a pessoa já pode assistir agora e priorize-os na resposta. Não sugira alugar, comprar ou " +
+                "assinar outro serviço; se o título realmente não estiver no catálogo, apenas diga que não encontrou."
 
         /** Lê o texto da conversa e as sugestões da resposta da API de respostas. */
         fun parseChat(response: String): ChatReply {

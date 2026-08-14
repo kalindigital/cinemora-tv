@@ -16,6 +16,7 @@ class Speaker(
     private val context: Context,
     private val openAi: OpenAiClient,
     private val onFalando: (Boolean) -> Unit = {},
+    private val onStatus: (String) -> Unit = {},
 ) {
     private var tts: TextToSpeech? = null
     private var player: MediaPlayer? = null
@@ -41,6 +42,10 @@ class Speaker(
         runCatching { player?.stop(); player?.release() }
         player = null
         avisar(false)
+    }
+
+    private fun reportar(texto: String) {
+        android.os.Handler(android.os.Looper.getMainLooper()).post { onStatus(texto) }
     }
 
     private fun avisar(falando: Boolean) {
@@ -84,23 +89,39 @@ class Speaker(
             // Se outra fala começou nesse meio-tempo, esta é descartada.
             if (pedido != pedidoAtual) return@execute
             if (audio == null) {
+                reportar("a OpenAI não devolveu áudio; usando a voz do Google")
                 android.os.Handler(android.os.Looper.getMainLooper()).post { falarComGoogle(text) }
                 return@execute
             }
             runCatching {
                 val arquivo = File(context.cacheDir, "fala-$pedido.mp3").apply { writeBytes(audio) }
                 val novo = MediaPlayer().apply {
+                    // Em TV, sem declarar o uso o áudio pode sair em rota errada (ou mudo).
+                    setAudioAttributes(
+                        android.media.AudioAttributes.Builder()
+                            .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .build(),
+                    )
                     setDataSource(arquivo.absolutePath)
                     setOnCompletionListener { it.release(); arquivo.delete(); avisar(false) }
+                    setOnErrorListener { _, what, extra ->
+                        reportar("erro ao tocar (what=$what extra=$extra)")
+                        avisar(false)
+                        true
+                    }
                     prepare()
                 }
                 if (pedido != pedidoAtual) {
                     novo.release(); arquivo.delete()
+                    reportar("descartado: outra fala começou")
                 } else {
                     player = novo
                     novo.start()
+                    reportar("tocando (${audio.size / 1024} KB)")
                 }
-            }.onFailure {
+            }.onFailure { falha ->
+                reportar("falhou: ${falha::class.java.simpleName} — ${falha.message.orEmpty().take(80)}")
                 android.os.Handler(android.os.Looper.getMainLooper()).post { falarComGoogle(text) }
             }
         }

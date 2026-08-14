@@ -10,6 +10,7 @@ import androidx.lifecycle.AndroidViewModel
 import br.com.cinemora.tv.data.AiMatches
 import br.com.cinemora.tv.data.CacheTtl
 import br.com.cinemora.tv.data.CatalogMatcher
+import br.com.cinemora.tv.data.CatalogSearch
 import br.com.cinemora.tv.data.CinemoraRepository
 import br.com.cinemora.tv.data.SortOrder
 import br.com.cinemora.tv.data.UpdateInfo
@@ -66,7 +67,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = CinemoraRepository(LocalStore(app))
     private val openAi = OpenAiClient(keyProvider = { repo.openAiKey() })
     private val updates = UpdateService(app)
-    private val speaker = Speaker(app, openAi) { falando -> speaking = falando }
+    private val speaker = Speaker(
+        app,
+        openAi,
+        onFalando = { falando -> speaking = falando },
+        onStatus = { texto -> voiceStatus = texto },
+    )
     var state: AppState by mutableStateOf(AppState.Login)
         private set
     var seriesDetail: DetailState by mutableStateOf(DetailState.Idle)
@@ -91,6 +97,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var voiceMode: VoiceMode by mutableStateOf(VoiceMode.GOOGLE)
         private set
     var speaking: Boolean by mutableStateOf(false)
+        private set
+    /** Último estado da voz, exibido no chat quando algo dá errado. */
+    var voiceStatus: String? by mutableStateOf(null)
         private set
     var sortOrder: SortOrder by mutableStateOf(repo.sortOrder())
         private set
@@ -351,7 +360,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         speaker.stop()
 
         executor.execute {
-            val resultado = runCatching { openAi.chat(ChatStore.lastMessages(comPergunta.messages)) }
+            // A IA não conhece o catálogo: mandamos os títulos que combinam com a pergunta
+            // para ela responder sobre o que você tem, em vez de mandar alugar em outro lugar.
+            val doCatalogo = catalog?.let { CatalogSearch.candidates(pergunta, it) }.orEmpty()
+            val paraEnvio = ChatStore.lastMessages(comPergunta.messages).toMutableList()
+            if (doCatalogo.isNotEmpty()) {
+                val ultima = paraEnvio.last()
+                paraEnvio[paraEnvio.lastIndex] = ultima.copy(
+                    text = ultima.text + "\n\n[Disponíveis no catálogo do usuário: " +
+                        doCatalogo.joinToString("; ") + "]",
+                )
+            }
+            val resultado = runCatching { openAi.chat(paraEnvio) }
             mainHandler.post {
                 chatThinking = false
                 resultado.fold(

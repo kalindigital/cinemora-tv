@@ -79,6 +79,7 @@ class MainActivity : ComponentActivity() {
                 chatThinking = viewModel.chatThinking,
                 chatError = viewModel.chatError,
                 speaking = viewModel.speaking,
+                voiceStatus = viewModel.voiceStatus,
                 onStopSpeech = viewModel::stopSpeech,
                 onSendChat = viewModel::sendChat,
                 onNewChat = viewModel::newChat,
