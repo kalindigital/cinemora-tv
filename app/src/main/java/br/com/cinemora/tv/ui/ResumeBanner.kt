@@ -15,8 +15,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,6 +35,9 @@ internal fun ResumeBanner(
     modifier: Modifier = Modifier,
 ) {
     if (entry == null) return
+    // Nas fileiras o D-pad percorre os cartões e nunca chega ao banner: ele assume o foco.
+    val continuarFoco = remember { FocusRequester() }
+    LaunchedEffect(entry.id) { runCatching { continuarFoco.requestFocus() } }
     Column(
         modifier
             .widthIn(max = 430.dp)
@@ -46,7 +53,11 @@ internal fun ResumeBanner(
         Text("Você parou em ${formatPosition(entry.positionMs)}.", color = Muted, fontSize = 13.sp)
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ActionButton("Continuar", icon = Icons.Rounded.PlayArrow) { onResume(entry) }
+            ActionButton(
+                "Continuar",
+                modifier = Modifier.focusRequester(continuarFoco),
+                icon = Icons.Rounded.PlayArrow,
+            ) { onResume(entry) }
             ActionButton("Agora não", onClick = onDismiss)
         }
     }
