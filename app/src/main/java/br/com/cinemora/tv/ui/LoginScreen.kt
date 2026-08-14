@@ -84,9 +84,39 @@ internal fun LoginScreen(onSignIn: (String, String, String) -> Unit) {
     }
 }
 
+private val FRASES_DE_ESPERA = listOf(
+    "Separando o que vale a sua noite…",
+    "Tirando o pó das capas…",
+    "Organizando as prateleiras…",
+    "Perguntando aos filmes quem quer ser visto hoje…",
+    "Passando pano na tela grande…",
+    "Escolhendo o destaque do dia…",
+    "Arrumando as poltronas…",
+    "Ajustando o som da sala…",
+    "Buscando seu catálogo…",
+    "Preparando a sessão…",
+)
+
 @Composable
-internal fun LoadingScreen() = Box(Modifier.fillMaxSize().background(Ink), contentAlignment = Alignment.Center) {
-    Text("Montando seu catálogo…", color = Mist, fontSize = 24.sp, fontWeight = FontWeight.Medium)
+internal fun LoadingScreen() {
+    // Uma frase diferente a cada vez que a tela aparece.
+    val frase = remember { FRASES_DE_ESPERA.random() }
+    Box(Modifier.fillMaxSize().background(Ink), contentAlignment = Alignment.Center) {
+        Image(
+            painterResource(R.drawable.login_bg), contentDescription = null,
+            contentScale = ContentScale.Crop, alpha = 0.14f, modifier = Modifier.fillMaxSize(),
+        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Image(
+                painterResource(R.drawable.logo), contentDescription = "Cinemora",
+                modifier = Modifier.size(96.dp).clip(CircleShape),
+            )
+            Spacer(Modifier.height(14.dp))
+            Text("CINEMORA", color = Signal, fontSize = 20.sp, fontWeight = FontWeight.Black, letterSpacing = 5.sp)
+            Spacer(Modifier.height(22.dp))
+            Text(frase, color = Mist, fontSize = 19.sp, fontWeight = FontWeight.Medium)
+        }
+    }
 }
 
 @Composable
