@@ -31,6 +31,7 @@ import br.com.cinemora.tv.data.Speaker
 import br.com.cinemora.tv.data.VoiceMode
 import br.com.cinemora.tv.data.VoiceSpeed
 import br.com.cinemora.tv.data.Recommendations
+import br.com.cinemora.tv.data.SemLinks
 import br.com.cinemora.tv.data.ResumeEntry
 import br.com.cinemora.tv.data.LocalStore
 import br.com.cinemora.tv.data.UserData
@@ -409,7 +410,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         insightTitulo = titulo
         insight = "Consultando…"
         executor.execute {
-            val texto = runCatching(bloco).getOrElse { "Não consegui buscar agora." }
+            val texto = SemLinks.limpar(runCatching(bloco).getOrElse { "Não consegui buscar agora." })
             mainHandler.post {
                 insight = texto
                 speaker.speak(texto, voiceMode)
@@ -598,7 +599,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             mainHandler.post {
                 chatThinking = false
                 resultado.fold(
-                    onSuccess = { reply -> registrarResposta(comPergunta, reply, catalog) },
+                    onSuccess = { reply ->
+                        registrarResposta(comPergunta, reply.copy(text = SemLinks.limpar(reply.text)), catalog)
+                    },
                     onFailure = { chatError = it.message ?: "Não consegui falar com a IA." },
                 )
             }

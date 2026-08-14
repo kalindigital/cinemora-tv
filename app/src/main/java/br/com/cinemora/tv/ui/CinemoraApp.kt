@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -355,6 +356,11 @@ private fun HomeShell(
     var openSeriesId by rememberSaveable { mutableStateOf<String?>(null) }
     var configurandoChave by rememberSaveable { mutableStateOf(false) }
     val contentFocus = remember { FocusRequester() }
+    // Guardados aqui fora: as seções saem da tela quando um detalhe abre, e a posição
+    // da rolagem se perdia junto — você voltava para o começo da lista.
+    val posicaoFilmes = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    val posicaoSeries = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+    val posicaoCategorias = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
 
     val section = remember(sectionName) { runCatching { Section.valueOf(sectionName) }.getOrDefault(Section.FILMES) }
     val movie = openMovieId?.let { id -> home.catalog.movies.firstOrNull { it.id == id } }
@@ -431,10 +437,16 @@ private fun HomeShell(
                 when (section) {
                     Section.FILMES -> MoviesSection(
                         home.catalog, home.userData, home.featured, featuredPlot, sortOrder, novidades,
+                        posicaoFilmes,
                     ) { openMovieId = it.id }
-                    Section.SERIES -> SeriesSection(home.catalog, home.userData, home.featuredSeries, sortOrder) { openSeriesId = it.id }
+                    Section.SERIES -> SeriesSection(
+                        home.catalog, home.userData, home.featuredSeries, sortOrder, posicaoSeries,
+                    ) { openSeriesId = it.id }
                     Section.CANAIS -> ChannelsSection(home.catalog) { onPlay(it.name, it.streamUrl, false, it.logoUrl) }
-                    Section.CATEGORIAS -> CategoriesSection(home.catalog, sortOrder, { openMovieId = it.id }, { openSeriesId = it.id }) { onPlay(it.name, it.streamUrl, false, it.logoUrl) }
+                    Section.CATEGORIAS -> CategoriesSection(
+                        home.catalog, sortOrder, posicaoCategorias,
+                        { openMovieId = it.id }, { openSeriesId = it.id },
+                    ) { onPlay(it.name, it.streamUrl, false, it.logoUrl) }
                     Section.PESQUISA -> SearchSection(home.catalog, { openMovieId = it.id }, { openSeriesId = it.id }) { onPlay(it.name, it.streamUrl, false, it.logoUrl) }
                     Section.IA -> ChatScreen(
                         catalog = home.catalog,

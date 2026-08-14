@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -80,6 +81,7 @@ internal fun MoviesSection(
     featuredPlot: String?,
     sortOrder: SortOrder,
     novidades: List<Video>,
+    listState: LazyListState,
     onOpenMovie: (Video) -> Unit,
 ) {
     val byId = remember(catalog) { catalog.movies.associateBy { it.id } }
@@ -101,7 +103,6 @@ internal fun MoviesSection(
     // O botão do banner aponta explicitamente para a primeira fileira: sem isso o
     // D-pad fica preso no banner, porque a busca de foco não atravessa o hero alto.
     val firstRow = remember { FocusRequester() }
-    val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 48.dp)) {
         item {
@@ -131,6 +132,7 @@ internal fun SeriesSection(
     userData: UserData,
     featured: Series?,
     sortOrder: SortOrder,
+    listState: LazyListState,
     onOpenSeries: (Series) -> Unit,
 ) {
     val byCategory = remember(catalog) { catalog.series.groupBy { it.categoryId } }
@@ -148,7 +150,6 @@ internal fun SeriesSection(
         }
     }
     val firstRow = remember { FocusRequester() }
-    val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 48.dp)) {
         item {
@@ -186,11 +187,12 @@ internal fun ChannelsSection(catalog: Catalog, onPlayChannel: (Channel) -> Unit)
 internal fun CategoriesSection(
     catalog: Catalog,
     sortOrder: SortOrder,
+    listState: LazyListState,
     onOpenMovie: (Video) -> Unit,
     onOpenSeries: (Series) -> Unit,
     onPlayChannel: (Channel) -> Unit,
 ) {
-    LazyColumn(contentPadding = PaddingValues(top = 12.dp, bottom = 48.dp)) {
+    LazyColumn(state = listState, contentPadding = PaddingValues(top = 12.dp, bottom = 48.dp)) {
         items(catalog.movieCategories) { category ->
             val videos = catalog.movies.filter { it.categoryId == category.id }
             if (videos.isNotEmpty()) PosterRow(category.name, CatalogSorter.movies(videos, sortOrder), onOpenMovie)
