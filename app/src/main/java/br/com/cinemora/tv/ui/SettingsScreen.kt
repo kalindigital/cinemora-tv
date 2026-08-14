@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import br.com.cinemora.tv.BuildConfig
 import br.com.cinemora.tv.UpdateState
 import br.com.cinemora.tv.data.CacheTtl
@@ -51,7 +53,9 @@ internal fun SettingsSection(
     onRefresh: () -> Unit,
 ) {
     var cleared by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 40.dp, top = 22.dp, end = 40.dp, bottom = 32.dp)) {
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    Column(Modifier.fillMaxSize().verticalScroll(scrollState).padding(start = 40.dp, top = 22.dp, end = 40.dp, bottom = 32.dp)) {
         Text("Definições", color = Mist, fontSize = 24.sp, fontWeight = FontWeight.ExtraBold)
         Spacer(Modifier.height(18.dp))
         Text("TELA INICIAL DA TV", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
@@ -74,7 +78,12 @@ internal fun SettingsSection(
             if (updateState is UpdateState.Available) {
                 ActionButton("Atualizar agora", onClick = onDownloadUpdate)
             }
-            ActionButton("Buscar atualização", onClick = onCheckUpdate)
+            ActionButton(
+                "Buscar atualização",
+                // Voltando das opções de baixo, a página retorna ao topo em vez de ficar cortada.
+                modifier = Modifier.onFocusChanged { if (it.isFocused) scope.launch { scrollState.animateScrollTo(0) } },
+                onClick = onCheckUpdate,
+            )
         }
         Spacer(Modifier.height(18.dp))
         Text("RECOMENDAÇÃO POR IA", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)

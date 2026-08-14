@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Button
@@ -31,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -62,6 +64,7 @@ import br.com.cinemora.tv.model.Credentials
 import br.com.cinemora.tv.model.Series
 import br.com.cinemora.tv.model.Video
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 
 internal fun movieKey(video: Video) = "m:${video.id}"
 internal fun seriesKey(series: Series) = "s:${series.id}"
@@ -96,7 +99,9 @@ internal fun MoviesSection(
     // O botão do banner aponta explicitamente para a primeira fileira: sem isso o
     // D-pad fica preso no banner, porque a busca de foco não atravessa o hero alto.
     val firstRow = remember { FocusRequester() }
-    LazyColumn(contentPadding = PaddingValues(bottom = 48.dp)) {
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 48.dp)) {
         item {
             Hero(
                 title = featured?.title,
@@ -104,7 +109,10 @@ internal fun MoviesSection(
                 imageUrl = ImageUrls.detail(featured?.coverUrl),
                 actionLabel = "Assistir",
                 onAction = featured?.let { { onOpenMovie(it) } },
-                modifier = Modifier.fillParentMaxHeight(0.68f),
+                modifier = Modifier.fillParentMaxHeight(0.68f)
+                    // Subindo das fileiras, o Compose revelava só o botão e o banner ficava
+                    // cortado: aqui a página volta ao topo.
+                    .onFocusChanged { if (it.hasFocus) scope.launch { listState.animateScrollToItem(0) } },
                 hasRows = rows.isNotEmpty(),
                 downTarget = firstRow,
             )
@@ -138,7 +146,9 @@ internal fun SeriesSection(
         }
     }
     val firstRow = remember { FocusRequester() }
-    LazyColumn(contentPadding = PaddingValues(bottom = 48.dp)) {
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 48.dp)) {
         item {
             Hero(
                 title = featured?.title,
@@ -146,7 +156,8 @@ internal fun SeriesSection(
                 imageUrl = ImageUrls.detail(featured?.coverUrl),
                 actionLabel = "Ver episódios",
                 onAction = featured?.let { { onOpenSeries(it) } },
-                modifier = Modifier.fillParentMaxHeight(0.68f),
+                modifier = Modifier.fillParentMaxHeight(0.68f)
+                    .onFocusChanged { if (it.hasFocus) scope.launch { listState.animateScrollToItem(0) } },
                 hasRows = rows.isNotEmpty(),
                 downTarget = firstRow,
             )
