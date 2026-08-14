@@ -41,6 +41,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -157,12 +158,18 @@ internal fun PosterCard(
         )
         Text(
             title, color = Mist, fontWeight = FontWeight.Normal,
-            minLines = if (compacto) 1 else 2, maxLines = if (compacto) 1 else 2,
-            fontSize = if (compacto) 11.sp else 13.sp, lineHeight = 16.sp,
+            minLines = 2, maxLines = 2,
+            // Sem isto o Compose cortava a palavra no meio, sem indicar que havia mais texto.
+            overflow = TextOverflow.Ellipsis,
+            fontSize = if (compacto) 11.sp else 13.sp,
+            lineHeight = if (compacto) 14.sp else 16.sp,
             modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 8.dp),
         )
         if (subtitle != null) {
-            Text(subtitle, color = Muted, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 3.dp, bottom = 8.dp))
+            Text(
+                subtitle, color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 3.dp, bottom = 8.dp),
+            )
         } else {
             Spacer(Modifier.height(8.dp))
         }
@@ -187,6 +194,9 @@ internal fun ChannelCard(name: String, logoUrl: String?, modifier: Modifier = Mo
             model = logoUrl, contentDescription = name, contentScale = ContentScale.Fit,
             modifier = Modifier.fillMaxWidth().height(96.dp).background(Color(0xFF0C1218)).padding(14.dp),
         )
-        Text(name, color = Mist, fontWeight = FontWeight.Normal, maxLines = 1, fontSize = 13.sp, modifier = Modifier.padding(8.dp))
+        Text(
+            name, color = Mist, fontWeight = FontWeight.Normal, maxLines = 1,
+            overflow = TextOverflow.Ellipsis, fontSize = 13.sp, modifier = Modifier.padding(8.dp),
+        )
     }
 }
