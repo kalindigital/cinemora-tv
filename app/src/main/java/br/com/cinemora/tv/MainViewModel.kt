@@ -22,6 +22,8 @@ import br.com.cinemora.tv.data.ChatRole
 import br.com.cinemora.tv.data.ChatSession
 import br.com.cinemora.tv.data.ChatStore
 import br.com.cinemora.tv.data.OpenAiClient
+import br.com.cinemora.tv.data.RealtimeEvent
+import br.com.cinemora.tv.data.RealtimeSession
 import br.com.cinemora.tv.data.Speaker
 import br.com.cinemora.tv.data.VoiceMode
 import br.com.cinemora.tv.data.VoiceSpeed
@@ -104,6 +106,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var voiceSpeed: VoiceSpeed by mutableStateOf(VoiceSpeed.NORMAL)
         private set
+    /** Conversa ao vivo: estado da linha e o que foi dito até agora. */
+    var liveStatus: String? by mutableStateOf(null)
+        private set
+    var liveActive: Boolean by mutableStateOf(false)
+        private set
+    private var live: RealtimeSession? = null
     var sortOrder: SortOrder by mutableStateOf(repo.sortOrder())
         private set
     /** Posição salva do filme aberto (0 = ainda não assistido). */
@@ -318,6 +326,66 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun stopSpeech() { speaker.stop() }
 
+    /** Abre a conversa ao vivo: microfone aberto, resposta em áudio contínuo. */
+    fun startLive() {
+        if (liveActive) return
+        val chave = repo.openAiKey()?.takeIf { it.isNotBlank() } ?: BuildConfig.OPENAI_API_KEY
+        if (chave.isBlank()) {
+            chatError = "Configure a chave da OpenAI em Definições."
+            return
+        }
+        speaker.stop()
+        liveActive = true
+        liveStatus = "conectando…"
+        val catalogo = (state as? AppState.Home)?.catalog
+        live = RealtimeSession(
+            apiKey = chave,
+            instrucoes = OpenAiClient.CHAT_PROMPT + " Fale de forma curta e natural, como numa conversa.",
+            voz = openAiVoice,
+            onEvent = { evento -> mainHandler.post { tratarLive(evento, catalogo) } },
+        ).also { it.start() }
+    }
+
+    fun stopLive() {
+        live?.stop()
+        live = null
+        liveActive = false
+        liveStatus = null
+    }
+
+    private fun tratarLive(evento: RealtimeEvent, catalogo: Catalog?) {
+        when (evento) {
+            RealtimeEvent.Conectado -> liveStatus = "conectado"
+            RealtimeEvent.Ouvindo -> liveStatus = "ouvindo você"
+            RealtimeEvent.Respondendo -> liveStatus = "respondendo"
+            RealtimeEvent.Encerrado -> { liveActive = false; liveStatus = null }
+            is RealtimeEvent.Erro -> { liveStatus = "erro: ${evento.mensagem}"; liveActive = false }
+            // O que foi falado vira mensagem na conversa, para ficar registrado.
+            is RealtimeEvent.VocêDisse -> registrarFala(ChatRole.USER, evento.texto, catalogo)
+            is RealtimeEvent.ElaDisse -> registrarFala(ChatRole.ASSISTANT, evento.texto, catalogo)
+        }
+    }
+
+    private fun registrarFala(role: ChatRole, texto: String, catalogo: Catalog?) {
+        if (texto.isBlank()) return
+        val agora = System.currentTimeMillis()
+        val base = currentChat ?: ChatSession(agora.toString(), ChatStore.titleFrom(texto), agora, emptyList())
+        // Da fala dela, tentamos aproveitar títulos citados para virar cartões.
+        val titulos = if (role == ChatRole.ASSISTANT && catalogo != null) {
+            val achados = CatalogMatcher.match(texto.split(Regex("[.,;!?]")).map { it.trim() }, catalogo)
+            achados.movies.map { movieKeyOf(it.id) } + achados.series.map { seriesKeyOf(it.id) }
+        } else {
+            emptyList()
+        }
+        val atualizada = base.copy(
+            messages = base.messages + ChatMessage(role, texto, titulos),
+            updatedAt = agora,
+        )
+        currentChat = atualizada
+        chatSessions = ChatStore.upsert(chatSessions, atualizada)
+        repo.saveChatSessions(chatSessions)
+    }
+
     /** Trocar de voz ou de velocidade toca uma amostra, para dar para comparar. */
     fun changeOpenAiVoice(voice: String) {
         repo.setOpenAiVoice(voice)
@@ -429,7 +497,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun logout() { repo.logout(); seriesDetail = DetailState.Idle; state = AppState.Login }
     fun returnToLogin() { state = AppState.Login }
 
-    override fun onCleared() { executor.shutdownNow(); speaker.release() }
+    override fun onCleared() { executor.shutdownNow(); speaker.release(); live?.stop() }
 
     private companion object {
         const val AMOSTRA = "Olá! É assim que eu vou falar com você no Cinemora."

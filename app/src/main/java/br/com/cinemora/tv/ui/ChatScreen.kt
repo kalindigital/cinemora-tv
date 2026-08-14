@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material.icons.rounded.VolumeOff
@@ -71,6 +72,10 @@ internal fun ChatScreen(
     error: String?,
     speaking: Boolean,
     onStopSpeech: () -> Unit,
+    liveActive: Boolean,
+    liveStatus: String?,
+    onStartLive: () -> Unit,
+    onStopLive: () -> Unit,
     hasKey: Boolean,
     onConfigureKey: () -> Unit,
     onSend: (String) -> Unit,
@@ -139,6 +144,11 @@ internal fun ChatScreen(
         return
     }
 
+    if (liveActive) {
+        AoVivo(liveStatus, session, catalog, onOpenMovie, onOpenSeries, onStopLive)
+        return
+    }
+
     if (ouvindo) {
         VoiceOverlay(
             onResult = { falado -> ouvindo = false; query = ""; onSend(falado) },
@@ -189,10 +199,54 @@ internal fun ChatScreen(
                     modifier = Modifier.weight(1f).focusRequester(campoFoco).dpadFocusNav(focusManager),
                 )
                 IconActionButton(Icons.Rounded.Mic, "Falar", modifier = Modifier.focusRequester(micFoco)) { ouvindo = true }
+                IconActionButton(Icons.Rounded.GraphicEq, "Conversa ao vivo", onClick = onStartLive)
                 IconActionButton(Icons.Rounded.Send, "Enviar") { onSend(query); query = "" }
                 if (speaking) IconActionButton(Icons.Rounded.VolumeOff, "Parar leitura", onClick = onStopSpeech)
             }
         }
+    }
+}
+
+/** Tela da conversa ao vivo: o microfone fica aberto e a resposta sai em áudio contínuo. */
+@Composable
+private fun AoVivo(
+    status: String?,
+    session: ChatSession?,
+    catalog: Catalog,
+    onOpenMovie: (Video) -> Unit,
+    onOpenSeries: (Series) -> Unit,
+    onStop: () -> Unit,
+) {
+    BackHandler(onBack = onStop)
+    val encerrar = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { encerrar.requestFocus() } }
+    val ultimas = session?.messages.orEmpty().takeLast(4)
+
+    Column(
+        Modifier.fillMaxSize().background(Ink).padding(40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("Conversa ao vivo", color = Mist, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(6.dp))
+        Text(status ?: "conectando…", color = Signal, fontSize = 14.sp)
+        Spacer(Modifier.height(6.dp))
+        Text("Pode falar naturalmente — ela responde sozinha quando você pausa.", color = Muted, fontSize = 13.sp)
+        Spacer(Modifier.height(20.dp))
+        Column(Modifier.weight(1f).fillMaxWidth()) {
+            ultimas.forEach { mensagem ->
+                Text(
+                    (if (mensagem.role == ChatRole.USER) "Você: " else "IA: ") + mensagem.text,
+                    color = if (mensagem.role == ChatRole.USER) Muted else Mist,
+                    fontSize = 15.sp,
+                    lineHeight = 21.sp,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                if (mensagem.titles.isNotEmpty()) {
+                    Sugestoes(mensagem.titles, catalog, onOpenMovie, onOpenSeries)
+                }
+            }
+        }
+        ActionButton("Encerrar conversa", modifier = Modifier.focusRequester(encerrar), onClick = onStop)
     }
 }
 
