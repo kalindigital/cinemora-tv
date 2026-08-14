@@ -116,6 +116,21 @@ fun CinemoraApp(
     onStopSpeech: () -> Unit,
     typewriter: Boolean,
     onSetTypewriter: (Boolean) -> Unit,
+    familyMode: Boolean,
+    onSetFamilyMode: (Boolean) -> Unit,
+    novidades: List<Video>,
+    watchlist: List<String>,
+    chegaram: List<Pair<String, Video>>,
+    onAddWatchlist: (String) -> Unit,
+    onRemoveWatchlist: (String) -> Unit,
+    onDismissChegaram: () -> Unit,
+    tasteProfile: String?,
+    onRefreshTaste: () -> Unit,
+    insight: String?,
+    insightTitulo: String?,
+    onAskVerdict: (Video) -> Unit,
+    onAskRecap: (Series, Int, Int) -> Unit,
+    onCloseInsight: () -> Unit,
     liveEnabled: Boolean,
     onSetLiveEnabled: (Boolean) -> Unit,
     liveActive: Boolean,
@@ -191,6 +206,21 @@ fun CinemoraApp(
                     onStopSpeech = onStopSpeech,
                     typewriter = typewriter,
                     onSetTypewriter = onSetTypewriter,
+                    familyMode = familyMode,
+                    onSetFamilyMode = onSetFamilyMode,
+                    novidades = novidades,
+                    watchlist = watchlist,
+                    chegaram = chegaram,
+                    onAddWatchlist = onAddWatchlist,
+                    onRemoveWatchlist = onRemoveWatchlist,
+                    onDismissChegaram = onDismissChegaram,
+                    tasteProfile = tasteProfile,
+                    onRefreshTaste = onRefreshTaste,
+                    insight = insight,
+                    insightTitulo = insightTitulo,
+                    onAskVerdict = onAskVerdict,
+                    onAskRecap = onAskRecap,
+                    onCloseInsight = onCloseInsight,
                     liveEnabled = liveEnabled,
                     onSetLiveEnabled = onSetLiveEnabled,
                     liveActive = liveActive,
@@ -276,6 +306,21 @@ private fun HomeShell(
     onStopSpeech: () -> Unit,
     typewriter: Boolean,
     onSetTypewriter: (Boolean) -> Unit,
+    familyMode: Boolean,
+    onSetFamilyMode: (Boolean) -> Unit,
+    novidades: List<Video>,
+    watchlist: List<String>,
+    chegaram: List<Pair<String, Video>>,
+    onAddWatchlist: (String) -> Unit,
+    onRemoveWatchlist: (String) -> Unit,
+    onDismissChegaram: () -> Unit,
+    tasteProfile: String?,
+    onRefreshTaste: () -> Unit,
+    insight: String?,
+    insightTitulo: String?,
+    onAskVerdict: (Video) -> Unit,
+    onAskRecap: (Series, Int, Int) -> Unit,
+    onCloseInsight: () -> Unit,
     liveEnabled: Boolean,
     onSetLiveEnabled: (Boolean) -> Unit,
     liveActive: Boolean,
@@ -316,6 +361,11 @@ private fun HomeShell(
     val series = openSeriesId?.let { id -> home.catalog.series.firstOrNull { it.id == id } }
     // O detalhe substitui o conteúdo (em vez de sobrepor): mantê-lo por cima deixava a
     // lista de trás ainda focável, e o D-pad/Enter continuavam agindo nela.
+    if (insight != null) {
+        InsightDialog(insightTitulo.orEmpty(), insight, onCloseInsight)
+        return
+    }
+
     when {
         configurandoChave -> KeySetupScreen(
             onKeyReceived = onSaveOpenAiKey,
@@ -343,6 +393,7 @@ private fun HomeShell(
                     Recommendations.related(home.catalog, movie, home.userData.watched.toSet())
                 },
                 onOpenRelated = { openMovieId = it.id },
+                onAskVerdict = { onAskVerdict(movie) },
             )
         }
         series != null -> SeriesDetailScreen(
@@ -368,6 +419,7 @@ private fun HomeShell(
                 Recommendations.relatedSeries(home.catalog, series, home.userData.watched.toSet())
             },
             onOpenRelated = { openSeriesId = it.id },
+            onAskRecap = { temporada, episodio -> onAskRecap(series, temporada, episodio) },
         )
         else -> Box(Modifier.fillMaxSize()) {
             Box(
@@ -377,7 +429,9 @@ private fun HomeShell(
                     .focusGroup(),
             ) {
                 when (section) {
-                    Section.FILMES -> MoviesSection(home.catalog, home.userData, home.featured, featuredPlot, sortOrder) { openMovieId = it.id }
+                    Section.FILMES -> MoviesSection(
+                        home.catalog, home.userData, home.featured, featuredPlot, sortOrder, novidades,
+                    ) { openMovieId = it.id }
                     Section.SERIES -> SeriesSection(home.catalog, home.userData, home.featuredSeries, sortOrder) { openSeriesId = it.id }
                     Section.CANAIS -> ChannelsSection(home.catalog) { onPlay(it.name, it.streamUrl, false, it.logoUrl) }
                     Section.CATEGORIAS -> CategoriesSection(home.catalog, sortOrder, { openMovieId = it.id }, { openSeriesId = it.id }) { onPlay(it.name, it.streamUrl, false, it.logoUrl) }
@@ -429,6 +483,13 @@ private fun HomeShell(
                         onSetTypewriter,
                         liveEnabled,
                         onSetLiveEnabled,
+                        familyMode,
+                        onSetFamilyMode,
+                        watchlist,
+                        onAddWatchlist,
+                        onRemoveWatchlist,
+                        tasteProfile,
+                        onRefreshTaste,
                     )
                     Section.PERFIL -> ProfileSection(account, onLogout)
                 }
@@ -439,6 +500,14 @@ private fun HomeShell(
                     resumeEntry,
                     onResume = onResumeEntry,
                     onDismiss = onDismissResume,
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(28.dp),
+                )
+            }
+            if (chegaram.isNotEmpty() && updateState is UpdateState.Idle) {
+                ChegouBanner(
+                    chegaram.first(),
+                    onOpen = { openMovieId = it.id; onDismissChegaram() },
+                    onDismiss = onDismissChegaram,
                     modifier = Modifier.align(Alignment.BottomEnd).padding(28.dp),
                 )
             }

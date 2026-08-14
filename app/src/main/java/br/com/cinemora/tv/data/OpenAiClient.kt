@@ -88,6 +88,22 @@ class OpenAiClient(
         return parseChat(post("https://api.openai.com/v1/responses", body.toString()))
     }
 
+    /** Pergunta avulsa em texto (resumo, veredito, perfil). Sem JSON, sem cartões. */
+    fun askText(instrucoes: String, pedido: String, comWeb: Boolean = false): String {
+        require(isConfigured()) { "Configure a chave da OpenAI." }
+        val body = JSONObject()
+            .put("model", CHAT_MODEL)
+            .put("instructions", instrucoes)
+            .put("input", JSONArray().put(JSONObject().put("role", "user").put("content", pedido)))
+        if (comWeb) body.put("tools", JSONArray().put(JSONObject().put("type", "web_search")))
+        val resposta = post("https://api.openai.com/v1/responses", body.toString())
+        val saida = JSONObject(resposta).optJSONArray("output") ?: return ""
+        return (0 until saida.length())
+            .map { saida.getJSONObject(it) }
+            .firstOrNull { it.optString("type") == "message" }
+            ?.optJSONArray("content")?.optJSONObject(0)?.optString("text").orEmpty()
+    }
+
     /** Áudio da resposta pela OpenAI, quando o usuário escolhe essa voz. */
     fun speech(text: String, voice: String = "alloy", speed: Float = 1f): ByteArray? = runCatching {
         val body = JSONObject()
@@ -148,6 +164,21 @@ class OpenAiClient(
                 "Quando a mensagem trouxer '[Disponíveis no catálogo do usuário: ...]', trate esses títulos como " +
                 "o que a pessoa já pode assistir agora e priorize-os na resposta. Não sugira alugar, comprar ou " +
                 "assinar outro serviço; se o título realmente não estiver no catálogo, apenas diga que não encontrou."
+
+        const val PROMPT_VEREDITO =
+            "Você ajuda alguém a decidir se vale a pena assistir. Em no máximo 3 frases, em português do " +
+                "Brasil, diga como o filme foi recebido pela crítica e pelo público e para quem ele serve. " +
+                "NUNCA conte spoilers, reviravoltas ou o final. Não escreva links."
+
+        const val PROMPT_RESUMO =
+            "Você lembra alguém do que aconteceu numa série. Em no máximo 4 frases, em português do Brasil, " +
+                "resuma os acontecimentos ATÉ o episódio indicado, sem revelar nada do episódio seguinte " +
+                "nem do futuro da série. Não escreva links."
+
+        const val PROMPT_PERFIL =
+            "A partir dos títulos que a pessoa assistiu e favoritou, descreva o gosto dela em no máximo 2 " +
+                "frases, em português do Brasil: gêneros, épocas e tipos de história que combinam com ela. " +
+                "Escreva em segunda pessoa, direto, sem listar os títulos."
 
         /** Lê o texto da conversa e as sugestões da resposta da API de respostas. */
         fun parseChat(response: String): ChatReply {

@@ -76,6 +76,31 @@ class LocalStore(context: Context) {
         prefs.edit().putString(KEY_VOICE_SPEED, speed.name).apply()
     }
 
+    fun knownIds(): Set<String> = prefs.getStringSet(KEY_KNOWN, emptySet()).orEmpty()
+
+    fun saveKnownIds(ids: Set<String>) {
+        prefs.edit().putStringSet(KEY_KNOWN, ids).apply()
+    }
+
+    fun familyMode(): Boolean = prefs.getBoolean(KEY_FAMILY, false)
+
+    fun setFamilyMode(ativo: Boolean) {
+        prefs.edit().putBoolean(KEY_FAMILY, ativo).apply()
+    }
+
+    fun watchlist(): List<String> =
+        prefs.getString(KEY_WATCHLIST, "").orEmpty().split("|").filter { it.isNotBlank() }
+
+    fun saveWatchlist(itens: List<String>) {
+        prefs.edit().putString(KEY_WATCHLIST, itens.joinToString("|")).apply()
+    }
+
+    fun tasteProfile(): String? = prefs.getString(KEY_TASTE, null)?.takeIf { it.isNotBlank() }
+
+    fun saveTasteProfile(perfil: String) {
+        prefs.edit().putString(KEY_TASTE, perfil).apply()
+    }
+
     fun liveEnabled(): Boolean = prefs.getBoolean(KEY_LIVE, true)
 
     fun setLiveEnabled(ativo: Boolean) {
@@ -184,5 +209,9 @@ class LocalStore(context: Context) {
         const val KEY_VOICE_SPEED = "voice_speed"
         const val KEY_TYPEWRITER = "typewriter"
         const val KEY_LIVE = "live_enabled"
+        const val KEY_KNOWN = "known_ids"
+        const val KEY_FAMILY = "family_mode"
+        const val KEY_WATCHLIST = "watchlist"
+        const val KEY_TASTE = "taste_profile"
     }
 }

@@ -79,16 +79,18 @@ internal fun MoviesSection(
     featured: Video?,
     featuredPlot: String?,
     sortOrder: SortOrder,
+    novidades: List<Video>,
     onOpenMovie: (Video) -> Unit,
 ) {
     val byId = remember(catalog) { catalog.movies.associateBy { it.id } }
     val byCategory = remember(catalog) { catalog.movies.groupBy { it.categoryId } }
     val continuar = userData.watched.mapNotNull { byId[it] }
     val favoritos = catalog.movies.filter { movieKey(it) in userData.favorites }
-    val rows = remember(catalog, userData, sortOrder) {
+    val rows = remember(catalog, userData, sortOrder, novidades) {
         buildList {
             // "Continuar assistindo" fica em ordem de exibição, não na ordenação escolhida.
             if (continuar.isNotEmpty()) add("Continuar assistindo" to continuar)
+            if (novidades.isNotEmpty()) add("Novidades no catálogo" to novidades)
             if (favoritos.isNotEmpty()) add("Favoritos" to CatalogSorter.movies(favoritos, sortOrder))
             catalog.movieCategories.forEach { category ->
                 byCategory[category.id]?.takeIf { it.isNotEmpty() }

@@ -75,6 +75,7 @@ internal fun MovieDetail(
     onClose: () -> Unit,
     related: List<Video>,
     onOpenRelated: (Video) -> Unit,
+    onAskVerdict: () -> Unit,
 ) {
     BackHandler(onBack = onClose)
     val playFocus = remember { FocusRequester() }
@@ -130,6 +131,7 @@ internal fun MovieDetail(
                         ActionButton("Reiniciar") { onRecordWatched(video.id); onPlay(video.title, video.streamUrl, true, video.coverUrl) }
                     }
                     FavoriteButton(isFavorite, onToggleFavorite)
+                    ActionButton("Vale a pena?", onClick = onAskVerdict)
                     ActionButton("Voltar", onClick = onClose)
                 }
                 // Basta estar no histórico: nem todo assistido tem posição salva.
@@ -157,6 +159,7 @@ internal fun SeriesDetailScreen(
     onClose: () -> Unit,
     related: List<Series>,
     onOpenRelated: (Series) -> Unit,
+    onAskRecap: (Int, Int) -> Unit,
 ) {
     BackHandler(onBack = onClose)
     LaunchedEffect(series.id) { onLoad() }
@@ -215,6 +218,9 @@ internal fun SeriesDetailScreen(
                         }
                     }
                     FavoriteButton(isFavorite, onToggleFavorite)
+                    if (continuarEm != null && (continuarEm.episode > 1 || continuarEm.season > 1)) {
+                        ActionButton("Onde eu parei?") { onAskRecap(continuarEm.season, continuarEm.episode) }
+                    }
                     ActionButton("Voltar", onClick = onClose)
                 }
             }

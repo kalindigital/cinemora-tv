@@ -70,6 +70,22 @@ class CinemoraRepository(
 
     fun setOpenAiVoice(voice: String) = store.setOpenAiVoice(voice)
 
+    fun knownIds(): Set<String> = store.knownIds()
+
+    fun saveKnownIds(ids: Set<String>) = store.saveKnownIds(ids)
+
+    fun familyMode(): Boolean = store.familyMode()
+
+    fun setFamilyMode(ativo: Boolean) = store.setFamilyMode(ativo)
+
+    fun watchlist(): List<String> = store.watchlist()
+
+    fun saveWatchlist(itens: List<String>) = store.saveWatchlist(itens)
+
+    fun tasteProfile(): String? = store.tasteProfile()
+
+    fun saveTasteProfile(perfil: String) = store.saveTasteProfile(perfil)
+
     fun liveEnabled(): Boolean = store.liveEnabled()
 
     fun setLiveEnabled(ativo: Boolean) = store.setLiveEnabled(ativo)

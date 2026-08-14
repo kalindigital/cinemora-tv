@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -19,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -65,7 +67,15 @@ internal fun SettingsSection(
     onSetTypewriter: (Boolean) -> Unit,
     liveEnabled: Boolean,
     onSetLiveEnabled: (Boolean) -> Unit,
+    familyMode: Boolean,
+    onSetFamilyMode: (Boolean) -> Unit,
+    watchlist: List<String>,
+    onAddWatchlist: (String) -> Unit,
+    onRemoveWatchlist: (String) -> Unit,
+    tasteProfile: String?,
+    onRefreshTaste: () -> Unit,
 ) {
+    var esperado by remember { mutableStateOf("") }
     var cleared by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
@@ -129,6 +139,48 @@ internal fun SettingsSection(
             }
         }
         Spacer(Modifier.height(14.dp))
+        Text("SEU PERFIL DE GOSTO", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            tasteProfile ?: "Ainda não montado. A IA usa isso para acertar melhor nas recomendações.",
+            color = Muted, fontSize = 13.sp, lineHeight = 19.sp,
+        )
+        Spacer(Modifier.height(8.dp))
+        ActionButton(if (tasteProfile == null) "Montar meu perfil" else "Atualizar perfil", onClick = onRefreshTaste)
+
+        Spacer(Modifier.height(18.dp))
+        Text("MODO FAMÍLIA", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Spacer(Modifier.height(6.dp))
+        Text("Mostra apenas categorias infantis e de animação, escondendo o resto.", color = Muted, fontSize = 12.sp)
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Chip("Ativado", familyMode) { onSetFamilyMode(true) }
+            Chip("Desativado", !familyMode) { onSetFamilyMode(false) }
+        }
+
+        Spacer(Modifier.height(18.dp))
+        Text("ME AVISA QUANDO CHEGAR", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Spacer(Modifier.height(6.dp))
+        OutlinedTextField(
+            value = esperado,
+            onValueChange = { esperado = it },
+            label = { Text("Nome do filme") },
+            singleLine = true,
+            colors = fieldColors(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(8.dp))
+        ActionButton("Avisar quando entrar") { onAddWatchlist(esperado); esperado = "" }
+        if (watchlist.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                watchlist.take(4).forEach { titulo ->
+                    Chip("$titulo  ✕", false) { onRemoveWatchlist(titulo) }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(18.dp))
         Text("CONVERSA AO VIVO", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         Spacer(Modifier.height(6.dp))
         Text("Fala contínua com a IA. É o recurso mais caro: cobra por minuto de áudio.", color = Muted, fontSize = 12.sp)

@@ -10,7 +10,10 @@ import androidx.lifecycle.AndroidViewModel
 import br.com.cinemora.tv.data.AiMatches
 import br.com.cinemora.tv.data.CacheTtl
 import br.com.cinemora.tv.data.CatalogMatcher
+import br.com.cinemora.tv.data.CatalogNews
 import br.com.cinemora.tv.data.CatalogSearch
+import br.com.cinemora.tv.data.FamilyFilter
+import br.com.cinemora.tv.data.Watchlist
 import br.com.cinemora.tv.data.CinemoraRepository
 import br.com.cinemora.tv.data.SortOrder
 import br.com.cinemora.tv.data.UpdateInfo
@@ -110,6 +113,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var liveEnabled: Boolean by mutableStateOf(true)
         private set
+    var familyMode: Boolean by mutableStateOf(false)
+        private set
+    /** Títulos que entraram no catálogo desde a última atualização. */
+    var novidades: List<Video> by mutableStateOf(emptyList())
+        private set
+    var watchlist: List<String> by mutableStateOf(emptyList())
+        private set
+    var chegaram: List<Pair<String, Video>> by mutableStateOf(emptyList())
+        private set
+    var tasteProfile: String? by mutableStateOf(null)
+        private set
+    /** Texto avulso da IA (resumo da série, veredito do filme). */
+    var insight: String? by mutableStateOf(null)
+        private set
+    var insightTitulo: String? by mutableStateOf(null)
+        private set
     /** Conversa ao vivo: estado da linha e o que foi dito até agora. */
     var liveStatus: String? by mutableStateOf(null)
         private set
@@ -146,6 +165,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         voiceSpeed = repo.voiceSpeed()
         typewriter = repo.typewriter()
         liveEnabled = repo.liveEnabled()
+        familyMode = repo.familyMode()
+        watchlist = repo.watchlist()
+        tasteProfile = repo.tasteProfile()
         checkForUpdate(silencioso = true)
     }
 
@@ -219,8 +241,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         featuredPlot = null
         executor.execute {
             val loaded = runCatching { repo.loadCatalog(credentials, forceRefresh) }
+            loaded.getOrNull()?.let { conteudo ->
+                val conhecidos = repo.knownIds()
+                val novos = CatalogNews.novidades(conteudo.catalog, conhecidos)
+                repo.saveKnownIds(CatalogNews.idsConhecidos(conteudo.catalog))
+                val esperados = Watchlist.chegaram(repo.watchlist(), conteudo.catalog)
+                mainHandler.post { novidades = novos; chegaram = esperados }
+            }
             val result = loaded.fold(
-                onSuccess = { AppState.Home(it.catalog, it.featured, it.featuredSeries, repo.userData()) },
+                onSuccess = {
+                    val visivel = if (repo.familyMode()) FamilyFilter.apply(it.catalog) else it.catalog
+                    AppState.Home(visivel, it.featured, it.featuredSeries, repo.userData())
+                },
                 onFailure = { AppState.Error(it.message ?: "Não foi possível carregar o catálogo.") },
             )
             mainHandler.post { state = result; onPlaybackFinished() }
@@ -328,6 +360,83 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         repo.setVoiceMode(mode)
         voiceMode = mode
         if (mode == VoiceMode.MUDO) speaker.stop()
+    }
+
+    fun changeFamilyMode(ativo: Boolean) {
+        repo.setFamilyMode(ativo)
+        familyMode = ativo
+        refresh()
+    }
+
+    fun addToWatchlist(titulo: String) {
+        watchlist = Watchlist.adicionar(watchlist, titulo)
+        repo.saveWatchlist(watchlist)
+    }
+
+    fun removeFromWatchlist(titulo: String) {
+        watchlist = Watchlist.remover(watchlist, titulo)
+        repo.saveWatchlist(watchlist)
+        chegaram = chegaram.filterNot { it.first.equals(titulo, ignoreCase = true) }
+    }
+
+    fun dismissChegaram() { chegaram = emptyList() }
+
+    /** "Vale a pena?" — opinião curta com base na crítica, sem spoiler. */
+    fun askVerdict(video: Video) = pedirInsight(video.title) {
+        openAi.askText(
+            OpenAiClient.PROMPT_VEREDITO,
+            "Filme: ${'$'}{video.title}. Vale a pena assistir?",
+            comWeb = true,
+        )
+    }
+
+    /** "Onde eu parei?" — resumo até o episódio anterior. */
+    fun askRecap(series: Series, season: Int, episode: Int) =
+        pedirInsight("${'$'}{series.title} — até T${'$'}season E${'$'}{episode - 1}") {
+            openAi.askText(
+                OpenAiClient.PROMPT_RESUMO,
+                "Série: ${'$'}{series.title}. Resuma até a temporada ${'$'}season, episódio ${'$'}{episode - 1}.",
+                comWeb = true,
+            )
+        }
+
+    private fun pedirInsight(titulo: String, bloco: () -> String) {
+        if (!openAi.isConfigured()) {
+            insightTitulo = titulo
+            insight = "Configure a chave da OpenAI em Definições."
+            return
+        }
+        insightTitulo = titulo
+        insight = "Consultando…"
+        executor.execute {
+            val texto = runCatching(bloco).getOrElse { "Não consegui buscar agora." }
+            mainHandler.post {
+                insight = texto
+                speaker.speak(texto, voiceMode)
+            }
+        }
+    }
+
+    fun clearInsight() { insight = null; insightTitulo = null; speaker.stop() }
+
+    /** Perfil de gosto: resumo do que você assiste, usado nas recomendações. */
+    fun refreshTasteProfile() {
+        val home = state as? AppState.Home ?: return
+        val porId = home.catalog.movies.associateBy { it.id }
+        val assistidos = home.userData.watched.mapNotNull { porId[it]?.title }
+        val favoritos = home.catalog.movies.filter { "m:${'$'}{it.id}" in home.userData.favorites }.map { it.title }
+        val base = (assistidos + favoritos).distinct().take(25)
+        if (base.isEmpty()) {
+            tasteProfile = "Assista ou favorite alguns títulos para eu conhecer seu gosto."
+            return
+        }
+        tasteProfile = "Montando seu perfil…"
+        executor.execute {
+            val texto = runCatching {
+                openAi.askText(OpenAiClient.PROMPT_PERFIL, "Títulos: " + base.joinToString("; "))
+            }.getOrElse { "Não consegui montar agora." }
+            mainHandler.post { tasteProfile = texto; repo.saveTasteProfile(texto) }
+        }
     }
 
     fun changeTypewriter(ativo: Boolean) { repo.setTypewriter(ativo); typewriter = ativo }
@@ -472,6 +581,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     .getOrDefault(emptyList())
             }
             val doCatalogo = (citados + porTema).distinct().take(15)
+            val perfil = repo.tasteProfile()
             val paraEnvio = ChatStore.lastMessages(comPergunta.messages).toMutableList()
             if (doCatalogo.isNotEmpty()) {
                 val ultima = paraEnvio.last()
@@ -479,6 +589,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     text = ultima.text + "\n\n[Disponíveis no catálogo do usuário: " +
                         doCatalogo.joinToString("; ") + "]",
                 )
+            }
+            if (!perfil.isNullOrBlank()) {
+                val ultima = paraEnvio.last()
+                paraEnvio[paraEnvio.lastIndex] = ultima.copy(text = ultima.text + "\n[Gosto: " + perfil + "]")
             }
             val resultado = runCatching { openAi.chat(paraEnvio) }
             mainHandler.post {
