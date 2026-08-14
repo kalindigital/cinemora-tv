@@ -44,7 +44,7 @@ internal fun LoginScreen(onSignIn: (String, String, String) -> Unit) {
     Box(Modifier.fillMaxSize().background(Ink)) {
         Image(
             painterResource(R.drawable.login_bg), contentDescription = null,
-            contentScale = ContentScale.Crop, alpha = 0.26f, modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop, alpha = 0.14f, modifier = Modifier.fillMaxSize(),
         )
         Column(
             Modifier
