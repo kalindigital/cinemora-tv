@@ -29,6 +29,10 @@ git push origin HEAD --tags
 # O APK é anexado ao release, nunca versionado (fica fora da árvore do git).
 APK="$(mktemp -d)/cinemora-tv-$VERSAO.apk"
 cp app/build/outputs/apk/release/app-release.apk "$APK"
-env -u GH_TOKEN gh release create "v$VERSAO" "$APK" --title "Cinemora $VERSAO" --notes "$CHANGELOG"
-rm -f "$APK"
+# Dois nomes no release: um versionado (histórico) e um fixo, que dá a URL permanente
+# usada pela página de download e pelo app.
+FIXO="$(dirname "$APK")/cinemora-tv.apk"
+cp "$APK" "$FIXO"
+env -u GH_TOKEN gh release create "v$VERSAO" "$APK" "$FIXO" --title "Cinemora $VERSAO" --notes "$CHANGELOG"
+rm -f "$APK" "$FIXO"
 echo "release v$VERSAO publicado — o app vai oferecer a atualização"
