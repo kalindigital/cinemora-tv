@@ -61,6 +61,10 @@ internal fun SettingsSection(
     onSetOpenAiVoice: (String) -> Unit,
     voiceSpeed: VoiceSpeed,
     onSetVoiceSpeed: (VoiceSpeed) -> Unit,
+    typewriter: Boolean,
+    onSetTypewriter: (Boolean) -> Unit,
+    liveEnabled: Boolean,
+    onSetLiveEnabled: (Boolean) -> Unit,
 ) {
     var cleared by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
@@ -123,6 +127,22 @@ internal fun SettingsSection(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 VoiceSpeed.entries.forEach { v -> Chip(v.label(), v == voiceSpeed) { onSetVoiceSpeed(v) } }
             }
+        }
+        Spacer(Modifier.height(14.dp))
+        Text("CONVERSA AO VIVO", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Spacer(Modifier.height(6.dp))
+        Text("Fala contínua com a IA. É o recurso mais caro: cobra por minuto de áudio.", color = Muted, fontSize = 12.sp)
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Chip("Ativada", liveEnabled) { onSetLiveEnabled(true) }
+            Chip("Desativada", !liveEnabled) { onSetLiveEnabled(false) }
+        }
+        Spacer(Modifier.height(14.dp))
+        Text("RESPOSTA NO CHAT", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Chip("Escrevendo aos poucos", typewriter) { onSetTypewriter(true) }
+            Chip("Texto de uma vez", !typewriter) { onSetTypewriter(false) }
         }
         Spacer(Modifier.height(18.dp))
         Text("ORDENAR OS TÍTULOS", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)

@@ -76,6 +76,18 @@ class LocalStore(context: Context) {
         prefs.edit().putString(KEY_VOICE_SPEED, speed.name).apply()
     }
 
+    fun liveEnabled(): Boolean = prefs.getBoolean(KEY_LIVE, true)
+
+    fun setLiveEnabled(ativo: Boolean) {
+        prefs.edit().putBoolean(KEY_LIVE, ativo).apply()
+    }
+
+    fun typewriter(): Boolean = prefs.getBoolean(KEY_TYPEWRITER, true)
+
+    fun setTypewriter(ativo: Boolean) {
+        prefs.edit().putBoolean(KEY_TYPEWRITER, ativo).apply()
+    }
+
     fun sortOrder(): SortOrder =
         runCatching { SortOrder.valueOf(prefs.getString(KEY_SORT, "") ?: "") }.getOrDefault(SortOrder.PADRAO)
 
@@ -170,5 +182,7 @@ class LocalStore(context: Context) {
         const val KEY_VOICE = "voice_mode"
         const val KEY_OPENAI_VOICE = "openai_voice"
         const val KEY_VOICE_SPEED = "voice_speed"
+        const val KEY_TYPEWRITER = "typewriter"
+        const val KEY_LIVE = "live_enabled"
     }
 }

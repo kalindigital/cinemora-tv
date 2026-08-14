@@ -106,6 +106,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var voiceSpeed: VoiceSpeed by mutableStateOf(VoiceSpeed.NORMAL)
         private set
+    var typewriter: Boolean by mutableStateOf(true)
+        private set
+    var liveEnabled: Boolean by mutableStateOf(true)
+        private set
     /** Conversa ao vivo: estado da linha e o que foi dito até agora. */
     var liveStatus: String? by mutableStateOf(null)
         private set
@@ -140,6 +144,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         voiceMode = repo.voiceMode()
         openAiVoice = repo.openAiVoice()
         voiceSpeed = repo.voiceSpeed()
+        typewriter = repo.typewriter()
+        liveEnabled = repo.liveEnabled()
         checkForUpdate(silencioso = true)
     }
 
@@ -322,6 +328,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         repo.setVoiceMode(mode)
         voiceMode = mode
         if (mode == VoiceMode.MUDO) speaker.stop()
+    }
+
+    fun changeTypewriter(ativo: Boolean) { repo.setTypewriter(ativo); typewriter = ativo }
+
+    fun changeLiveEnabled(ativo: Boolean) {
+        repo.setLiveEnabled(ativo)
+        liveEnabled = ativo
+        if (!ativo) stopLive()
     }
 
     fun stopSpeech() { speaker.stop() }

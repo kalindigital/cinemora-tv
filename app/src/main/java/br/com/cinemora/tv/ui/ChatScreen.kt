@@ -72,6 +72,8 @@ internal fun ChatScreen(
     error: String?,
     speaking: Boolean,
     onStopSpeech: () -> Unit,
+    typewriter: Boolean,
+    liveEnabled: Boolean,
     liveActive: Boolean,
     liveStatus: String?,
     onStartLive: () -> Unit,
@@ -181,7 +183,9 @@ internal fun ChatScreen(
                     Mensagem(
                         message, catalog, onOpenMovie, onOpenSeries,
                         // Só a última resposta é "digitada"; as antigas já aparecem inteiras.
-                        digitando = index == session.messages.lastIndex && message.role == ChatRole.ASSISTANT,
+                        digitando = typewriter &&
+                            index == session.messages.lastIndex &&
+                            message.role == ChatRole.ASSISTANT,
                         onClick = {
                             if (message.role == ChatRole.ASSISTANT) onSpeakAgain(message.text) else retomarDe = index
                         },
@@ -234,7 +238,9 @@ internal fun ChatScreen(
                 )
                 IconActionButton(Icons.Rounded.Send, "Enviar") { onSend(query); query = "" }
                 // No canto: indo para o lado a partir do campo, você cai no enviar, não aqui.
-                IconActionButton(Icons.Rounded.GraphicEq, "Conversa ao vivo", onClick = onStartLive)
+                if (liveEnabled) {
+                    IconActionButton(Icons.Rounded.GraphicEq, "Conversa ao vivo", onClick = onStartLive)
+                }
             }
         }
     }

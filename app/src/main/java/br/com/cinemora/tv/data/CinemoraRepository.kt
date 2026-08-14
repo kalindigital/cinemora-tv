@@ -70,6 +70,14 @@ class CinemoraRepository(
 
     fun setOpenAiVoice(voice: String) = store.setOpenAiVoice(voice)
 
+    fun liveEnabled(): Boolean = store.liveEnabled()
+
+    fun setLiveEnabled(ativo: Boolean) = store.setLiveEnabled(ativo)
+
+    fun typewriter(): Boolean = store.typewriter()
+
+    fun setTypewriter(ativo: Boolean) = store.setTypewriter(ativo)
+
     fun voiceSpeed(): VoiceSpeed = store.voiceSpeed()
 
     fun setVoiceSpeed(speed: VoiceSpeed) = store.setVoiceSpeed(speed)
