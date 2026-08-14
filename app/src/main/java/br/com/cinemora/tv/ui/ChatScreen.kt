@@ -88,6 +88,7 @@ internal fun ChatScreen(
     var micJaAberto by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val campoFoco = remember { FocusRequester() }
+    val micFoco = remember { FocusRequester() }
     val listState = rememberLazyListState()
     var retomarDe by remember { mutableStateOf<Int?>(null) }
     var apagar by remember { mutableStateOf<ChatSession?>(null) }
@@ -107,8 +108,10 @@ internal fun ChatScreen(
             ouvindo = true
         }
     }
+    // O foco volta para o microfone, não para o campo: assim o teclado não sobe sozinho.
+    // Para digitar, basta ir para a esquerda.
     LaunchedEffect(ouvindo, thinking) {
-        if (!ouvindo && !thinking) runCatching { campoFoco.requestFocus() }
+        if (!ouvindo && !thinking) runCatching { micFoco.requestFocus() }
     }
     LaunchedEffect(session?.messages?.size) {
         val total = session?.messages?.size ?: 0
@@ -187,7 +190,7 @@ internal fun ChatScreen(
                     ),
                     modifier = Modifier.weight(1f).focusRequester(campoFoco).dpadFocusNav(focusManager),
                 )
-                IconActionButton(Icons.Rounded.Mic, "Falar") { ouvindo = true }
+                IconActionButton(Icons.Rounded.Mic, "Falar", modifier = Modifier.focusRequester(micFoco)) { ouvindo = true }
                 IconActionButton(Icons.Rounded.Send, "Enviar") { onSend(query); query = "" }
                 if (speaking) IconActionButton(Icons.Rounded.VolumeOff, "Parar leitura", onClick = onStopSpeech)
             }
