@@ -21,14 +21,14 @@ echo "versão $VERSAO (código $CODE_NOVO)"
 
 ./gradlew :app:testDebugUnitTest :app:assembleRelease
 
-APK="cinemora-tv-$VERSAO.apk"
-cp app/build/outputs/apk/release/app-release.apk "$APK"
-
 git add -A
 git commit -m "Versão $VERSAO"
 git tag "v$VERSAO"
 git push origin HEAD --tags
 
+# O APK é anexado ao release, nunca versionado (fica fora da árvore do git).
+APK="$(mktemp -d)/cinemora-tv-$VERSAO.apk"
+cp app/build/outputs/apk/release/app-release.apk "$APK"
 env -u GH_TOKEN gh release create "v$VERSAO" "$APK" --title "Cinemora $VERSAO" --notes "$CHANGELOG"
 rm -f "$APK"
 echo "release v$VERSAO publicado — o app vai oferecer a atualização"
