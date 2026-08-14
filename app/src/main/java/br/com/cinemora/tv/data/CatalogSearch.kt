@@ -18,13 +18,16 @@ object CatalogSearch {
             .filter { it.length >= 4 && it !in VAZIAS }
         if (palavras.isEmpty()) return emptyList()
 
-        val filmes = catalog.movies.asSequence()
-            .filter { video -> palavras.any { normalize(video.title).contains(it) } }
-            .map { it.title }
-        val series = catalog.series.asSequence()
-            .filter { serie -> palavras.any { normalize(serie.title).contains(it) } }
-            .map { it.title }
+        val filmes = catalog.movies.asSequence().filter { combina(it.title, palavras) }.map { it.title }
+        val series = catalog.series.asSequence().filter { combina(it.title, palavras) }.map { it.title }
         return (filmes + series).distinct().take(limit).toList()
+    }
+
+    /** Compara também sem espaços: por voz, "Homem-Aranha" costuma virar "homemaranha". */
+    private fun combina(titulo: String, palavras: List<String>): Boolean {
+        val normalizado = normalize(titulo)
+        val compacto = normalizado.replace(" ", "")
+        return palavras.any { normalizado.contains(it) || compacto.contains(it.replace(" ", "")) }
     }
 
     private val ACENTOS = Regex("\\p{Mn}+")

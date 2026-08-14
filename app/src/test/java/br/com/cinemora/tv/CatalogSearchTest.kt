@@ -34,6 +34,19 @@ class CatalogSearchTest {
         assertEquals(listOf("Round 6"), CatalogSearch.candidates("quero ver round 6 hoje", catalog))
     }
 
+    @Test fun `acha mesmo quando a fala junta as palavras do titulo`() {
+        val comHifen = Catalog(movies = listOf(movie("5", "Homem-Aranha: De Volta ao Lar (2017)")))
+        assertEquals(
+            listOf("Homem-Aranha: De Volta ao Lar (2017)"),
+            CatalogSearch.candidates("me mostra homemaranha", comHifen),
+        )
+    }
+
+    @Test fun `acha quando o titulo do catalogo e que vem junto`() {
+        val junto = Catalog(movies = listOf(movie("6", "SpiderMan (2002)")))
+        assertEquals(listOf("SpiderMan (2002)"), CatalogSearch.candidates("quero spider man", junto))
+    }
+
     @Test fun `limita a quantidade enviada ao modelo`() {
         val muitos = Catalog(movies = (1..40).map { movie("$it", "Vingadores $it") })
         assertTrue(CatalogSearch.candidates("quero vingadores", muitos, limit = 8).size <= 8)
