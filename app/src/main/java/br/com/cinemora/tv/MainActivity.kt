@@ -74,6 +74,15 @@ class MainActivity : ComponentActivity() {
                 onAskAi = viewModel::askAi,
                 hasOpenAiKey = viewModel.hasOpenAiKey,
                 onSaveOpenAiKey = viewModel::saveOpenAiKey,
+                chatSession = viewModel.currentChat,
+                chatSessions = viewModel.chatSessions,
+                chatThinking = viewModel.chatThinking,
+                chatError = viewModel.chatError,
+                onSendChat = viewModel::sendChat,
+                onNewChat = viewModel::newChat,
+                onOpenChat = viewModel::openChat,
+                voiceMode = viewModel.voiceMode,
+                onSetVoiceMode = viewModel::changeVoiceMode,
                 resumeEntry = viewModel.resumeEntry,
                 onResumeEntry = { entrada ->
                     viewModel.dismissResume()

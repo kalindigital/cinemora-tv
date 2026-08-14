@@ -6,6 +6,9 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
+/** Resposta da conversa: texto exibido/falado e títulos sugeridos. */
+data class ChatReply(val text: String, val titles: List<String>)
+
 /**
  * Recomendação por IA. O catálogo tem dezenas de milhares de títulos, então não é enviado:
  * pedimos títulos ao modelo e casamos com o catálogo local via [CatalogMatcher].
@@ -33,11 +36,13 @@ class OpenAiClient(
                     .put(JSONObject().put("role", "system").put("content", SYSTEM_PROMPT))
                     .put(JSONObject().put("role", "user").put("content", request)),
             )
-        return parseTitles(post(body.toString()))
+        return parseTitles(post("https://api.openai.com/v1/chat/completions", body.toString()))
     }
 
-    private fun post(payload: String): String {
-        val connection = (URL("https://api.openai.com/v1/chat/completions").openConnection() as HttpURLConnection).apply {
+    private fun post(url: String, payload: String): String = String(postBytes(url, payload))
+
+    private fun postBytes(url: String, payload: String): ByteArray {
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = 15_000
             readTimeout = 45_000
@@ -50,9 +55,9 @@ class OpenAiClient(
         return try {
             connection.outputStream.use { it.write(payload.toByteArray()) }
             val ok = connection.responseCode in 200..299
-            val text = (if (ok) connection.inputStream else connection.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (!ok) error(errorMessage(text, connection.responseCode))
-            text
+            val bytes = (if (ok) connection.inputStream else connection.errorStream)?.readBytes() ?: ByteArray(0)
+            if (!ok) error(errorMessage(String(bytes), connection.responseCode))
+            bytes
         } finally {
             connection.disconnect()
         }
@@ -63,12 +68,94 @@ class OpenAiClient(
         return detail?.takeIf { it.isNotBlank() } ?: "A IA respondeu com erro $code."
     }
 
+    /** Conversa com busca na web: o modelo decide quando pesquisar. */
+    fun chat(messages: List<ChatMessage>): ChatReply {
+        require(isConfigured()) { "Configure a chave da OpenAI." }
+        val entrada = JSONArray()
+        messages.forEach { message ->
+            entrada.put(
+                JSONObject()
+                    .put("role", if (message.role == ChatRole.USER) "user" else "assistant")
+                    .put("content", message.text),
+            )
+        }
+        val body = JSONObject()
+            .put("model", CHAT_MODEL)
+            .put("instructions", CHAT_PROMPT)
+            .put("tools", JSONArray().put(JSONObject().put("type", "web_search")))
+            .put("input", entrada)
+            .put("text", JSONObject().put("format", CHAT_FORMAT))
+        return parseChat(post("https://api.openai.com/v1/responses", body.toString()))
+    }
+
+    /** Áudio da resposta pela OpenAI, quando o usuário escolhe essa voz. */
+    fun speech(text: String): ByteArray? = runCatching {
+        val body = JSONObject()
+            .put("model", "gpt-4o-mini-tts")
+            .put("voice", "alloy")
+            .put("input", text.take(900))
+            .put("response_format", "mp3")
+        postBytes("https://api.openai.com/v1/audio/speech", body.toString())
+    }.getOrNull()
+
     companion object {
         private const val SYSTEM_PROMPT =
             "Você recomenda filmes e séries para um catálogo brasileiro de streaming. " +
                 "Responda SOMENTE em JSON no formato {\"titulos\": [\"Título 1\", \"Título 2\"]}, " +
                 "com 8 a 15 títulos reais que atendam ao pedido. " +
                 "Use o título em português do Brasil quando existir, sem o ano e sem comentários."
+
+        const val CHAT_MODEL = "gpt-4o-mini"
+
+        val CHAT_FORMAT: JSONObject
+            get() = JSONObject()
+                .put("type", "json_schema")
+                .put("name", "resposta_chat")
+                .put("strict", true)
+                .put(
+                    "schema",
+                    JSONObject()
+                        .put("type", "object")
+                        .put(
+                            "properties",
+                            JSONObject()
+                                .put("resposta", JSONObject().put("type", "string"))
+                                .put(
+                                    "titulos",
+                                    JSONObject().put("type", "array")
+                                        .put("items", JSONObject().put("type", "string")),
+                                ),
+                        )
+                        .put("required", JSONArray().put("resposta").put("titulos"))
+                        .put("additionalProperties", false),
+                )
+
+        const val CHAT_PROMPT =
+            "Você é o assistente do Cinemora, um app de TV. Converse em português do Brasil, " +
+                "de forma direta e amigável, em no máximo 3 frases — o texto será lido em voz alta. " +
+                "Pesquise na web quando a pergunta envolver lançamentos, novidades ou fatos recentes. " +
+                "Em 'titulos' coloque os filmes ou séries citados (título em português quando existir, sem o ano); " +
+                "deixe a lista vazia quando não estiver recomendando nada."
+
+        /** Lê o texto da conversa e as sugestões da resposta da API de respostas. */
+        fun parseChat(response: String): ChatReply {
+            val saida = JSONObject(response).optJSONArray("output") ?: return ChatReply("", emptyList())
+            val texto = (0 until saida.length())
+                .map { saida.getJSONObject(it) }
+                .firstOrNull { it.optString("type") == "message" }
+                ?.optJSONArray("content")
+                ?.optJSONObject(0)
+                ?.optString("text")
+                .orEmpty()
+            if (texto.isBlank()) return ChatReply("", emptyList())
+            val conteudo = runCatching { JSONObject(texto) }.getOrNull()
+                ?: return ChatReply(texto, emptyList())
+            val titulos = conteudo.optJSONArray("titulos") ?: JSONArray()
+            return ChatReply(
+                text = conteudo.optString("resposta"),
+                titles = List(titulos.length()) { titulos.optString(it) }.filter { it.isNotBlank() },
+            )
+        }
 
         /** Extrai os títulos da resposta do chat (o conteúdo é um JSON dentro do JSON). */
         fun parseTitles(response: String): List<String> {

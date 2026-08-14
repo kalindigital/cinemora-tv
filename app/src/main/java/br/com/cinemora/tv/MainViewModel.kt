@@ -15,7 +15,14 @@ import br.com.cinemora.tv.data.SortOrder
 import br.com.cinemora.tv.data.UpdateInfo
 import br.com.cinemora.tv.data.UpdateService
 import br.com.cinemora.tv.data.WatchNext
+import br.com.cinemora.tv.data.ChatMessage
+import br.com.cinemora.tv.data.ChatReply
+import br.com.cinemora.tv.data.ChatRole
+import br.com.cinemora.tv.data.ChatSession
+import br.com.cinemora.tv.data.ChatStore
 import br.com.cinemora.tv.data.OpenAiClient
+import br.com.cinemora.tv.data.Speaker
+import br.com.cinemora.tv.data.VoiceMode
 import br.com.cinemora.tv.data.Recommendations
 import br.com.cinemora.tv.data.ResumeEntry
 import br.com.cinemora.tv.data.LocalStore
@@ -59,6 +66,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = CinemoraRepository(LocalStore(app))
     private val openAi = OpenAiClient(keyProvider = { repo.openAiKey() })
     private val updates = UpdateService(app)
+    private val speaker = Speaker(app, openAi)
     var state: AppState by mutableStateOf(AppState.Login)
         private set
     var seriesDetail: DetailState by mutableStateOf(DetailState.Idle)
@@ -70,6 +78,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var featuredPlot: String? by mutableStateOf(null)
         private set
     var aiState: AiState by mutableStateOf(AiState.Idle)
+        private set
+    /** Conversas com a IA: a atual e a lista para retomar. */
+    var chatSessions: List<ChatSession> by mutableStateOf(emptyList())
+        private set
+    var currentChat: ChatSession? by mutableStateOf(null)
+        private set
+    var chatThinking: Boolean by mutableStateOf(false)
+        private set
+    var chatError: String? by mutableStateOf(null)
+        private set
+    var voiceMode: VoiceMode by mutableStateOf(VoiceMode.GOOGLE)
         private set
     var sortOrder: SortOrder by mutableStateOf(repo.sortOrder())
         private set
@@ -95,6 +114,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         resumeEntry?.let { WatchNext.update(app, it) }
         autoLogin()
         hasOpenAiKey = openAi.isConfigured()
+        chatSessions = repo.chatSessions()
+        voiceMode = repo.voiceMode()
         checkForUpdate(silencioso = true)
     }
 
@@ -273,6 +294,79 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearAi() { aiState = AiState.Idle }
 
+    fun changeVoiceMode(mode: VoiceMode) {
+        repo.setVoiceMode(mode)
+        voiceMode = mode
+        if (mode == VoiceMode.MUDO) speaker.stop()
+    }
+
+    fun newChat() { currentChat = null; chatError = null; speaker.stop() }
+
+    fun openChat(session: ChatSession) { currentChat = session; chatError = null }
+
+    fun deleteChat(session: ChatSession) {
+        chatSessions = chatSessions.filterNot { it.id == session.id }
+        repo.saveChatSessions(chatSessions)
+        if (currentChat?.id == session.id) currentChat = null
+    }
+
+    /** Envia a pergunta, guarda a conversa e fala a resposta. */
+    fun sendChat(question: String) {
+        val pergunta = question.trim()
+        if (pergunta.isBlank() || chatThinking) return
+        if (!openAi.isConfigured()) {
+            chatError = "Configure a chave da OpenAI em Definições."
+            return
+        }
+        val catalog = (state as? AppState.Home)?.catalog
+        val agora = System.currentTimeMillis()
+        val base = currentChat ?: ChatSession(
+            id = agora.toString(),
+            title = ChatStore.titleFrom(pergunta),
+            updatedAt = agora,
+            messages = emptyList(),
+        )
+        val comPergunta = base.copy(
+            messages = base.messages + ChatMessage(ChatRole.USER, pergunta, emptyList()),
+            updatedAt = agora,
+        )
+        currentChat = comPergunta
+        chatThinking = true
+        chatError = null
+        speaker.stop()
+
+        executor.execute {
+            val resultado = runCatching { openAi.chat(ChatStore.lastMessages(comPergunta.messages)) }
+            mainHandler.post {
+                chatThinking = false
+                resultado.fold(
+                    onSuccess = { reply -> registrarResposta(comPergunta, reply, catalog) },
+                    onFailure = { chatError = it.message ?: "Não consegui falar com a IA." },
+                )
+            }
+        }
+    }
+
+    private fun registrarResposta(sessao: ChatSession, reply: ChatReply, catalog: Catalog?) {
+        // Só sugerimos o que existe no catálogo: o resto viraria clique sem destino.
+        val disponiveis = catalog?.let { CatalogMatcher.match(reply.titles, it) }
+        val titulos = buildList {
+            disponiveis?.movies?.forEach { add(movieKeyOf(it.id)) }
+            disponiveis?.series?.forEach { add(seriesKeyOf(it.id)) }
+        }
+        val atualizada = sessao.copy(
+            messages = sessao.messages + ChatMessage(ChatRole.ASSISTANT, reply.text, titulos),
+            updatedAt = System.currentTimeMillis(),
+        )
+        currentChat = atualizada
+        chatSessions = ChatStore.upsert(chatSessions, atualizada)
+        repo.saveChatSessions(chatSessions)
+        speaker.speak(reply.text, voiceMode)
+    }
+
+    private fun movieKeyOf(id: String) = "m:${'$'}id"
+    private fun seriesKeyOf(id: String) = "s:${'$'}id"
+
     fun saveOpenAiKey(key: String) { repo.saveOpenAiKey(key); hasOpenAiKey = openAi.isConfigured() }
 
     fun changeSortOrder(order: SortOrder) { repo.setSortOrder(order); sortOrder = order }
@@ -281,5 +375,5 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun logout() { repo.logout(); seriesDetail = DetailState.Idle; state = AppState.Login }
     fun returnToLogin() { state = AppState.Login }
 
-    override fun onCleared() { executor.shutdownNow() }
+    override fun onCleared() { executor.shutdownNow(); speaker.release() }
 }

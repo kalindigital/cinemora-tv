@@ -60,6 +60,14 @@ class CinemoraRepository(
 
     fun resumeEntries(): List<ResumeEntry> = store.resumeEntries()
 
+    fun chatSessions(): List<ChatSession> = store.chatSessions()
+
+    fun saveChatSessions(sessions: List<ChatSession>) = store.saveChatSessions(sessions)
+
+    fun voiceMode(): VoiceMode = store.voiceMode()
+
+    fun setVoiceMode(mode: VoiceMode) = store.setVoiceMode(mode)
+
     fun openAiKey(): String? = store.openAiKey()
 
     fun saveOpenAiKey(key: String) = store.saveOpenAiKey(key)

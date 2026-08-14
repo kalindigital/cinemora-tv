@@ -50,6 +50,19 @@ class LocalStore(context: Context) {
         prefs.edit().remove(KEY_OPENAI).apply()
     }
 
+    fun chatSessions(): List<ChatSession> = ChatStore.decode(prefs.getString(KEY_CHATS, "[]").orEmpty())
+
+    fun saveChatSessions(sessions: List<ChatSession>) {
+        prefs.edit().putString(KEY_CHATS, ChatStore.encode(sessions)).apply()
+    }
+
+    fun voiceMode(): VoiceMode =
+        runCatching { VoiceMode.valueOf(prefs.getString(KEY_VOICE, "") ?: "") }.getOrDefault(VoiceMode.GOOGLE)
+
+    fun setVoiceMode(mode: VoiceMode) {
+        prefs.edit().putString(KEY_VOICE, mode.name).apply()
+    }
+
     fun sortOrder(): SortOrder =
         runCatching { SortOrder.valueOf(prefs.getString(KEY_SORT, "") ?: "") }.getOrDefault(SortOrder.PADRAO)
 
@@ -140,5 +153,7 @@ class LocalStore(context: Context) {
         const val KEY_FINISHED = "finished_stream"
         const val KEY_OPENAI = "openai_key"
         const val KEY_RESUME = "resume_entries"
+        const val KEY_CHATS = "chat_sessions"
+        const val KEY_VOICE = "voice_mode"
     }
 }

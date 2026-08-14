@@ -62,6 +62,8 @@ import br.com.cinemora.tv.UpdateState
 import br.com.cinemora.tv.R
 import br.com.cinemora.tv.AiState
 import br.com.cinemora.tv.data.CacheTtl
+import br.com.cinemora.tv.data.ChatSession
+import br.com.cinemora.tv.data.VoiceMode
 import br.com.cinemora.tv.data.Recommendations
 import br.com.cinemora.tv.data.ResumeEntry
 import br.com.cinemora.tv.data.SortOrder
@@ -105,6 +107,15 @@ fun CinemoraApp(
     onAskAi: (String) -> Unit,
     hasOpenAiKey: Boolean,
     onSaveOpenAiKey: (String) -> Unit,
+    chatSession: ChatSession?,
+    chatSessions: List<ChatSession>,
+    chatThinking: Boolean,
+    chatError: String?,
+    onSendChat: (String) -> Unit,
+    onNewChat: () -> Unit,
+    onOpenChat: (ChatSession) -> Unit,
+    voiceMode: VoiceMode,
+    onSetVoiceMode: (VoiceMode) -> Unit,
     resumeEntry: ResumeEntry?,
     onResumeEntry: (ResumeEntry) -> Unit,
     onDismissResume: () -> Unit,
@@ -154,6 +165,15 @@ fun CinemoraApp(
                     onAskAi = onAskAi,
                     hasOpenAiKey = hasOpenAiKey,
                     onSaveOpenAiKey = onSaveOpenAiKey,
+                    chatSession = chatSession,
+                    chatSessions = chatSessions,
+                    chatThinking = chatThinking,
+                    chatError = chatError,
+                    onSendChat = onSendChat,
+                    onNewChat = onNewChat,
+                    onOpenChat = onOpenChat,
+                    voiceMode = voiceMode,
+                    onSetVoiceMode = onSetVoiceMode,
                     resumeEntry = resumeEntry,
                     onResumeEntry = onResumeEntry,
                     onDismissResume = onDismissResume,
@@ -213,6 +233,15 @@ private fun HomeShell(
     onAskAi: (String) -> Unit,
     hasOpenAiKey: Boolean,
     onSaveOpenAiKey: (String) -> Unit,
+    chatSession: ChatSession?,
+    chatSessions: List<ChatSession>,
+    chatThinking: Boolean,
+    chatError: String?,
+    onSendChat: (String) -> Unit,
+    onNewChat: () -> Unit,
+    onOpenChat: (ChatSession) -> Unit,
+    voiceMode: VoiceMode,
+    onSetVoiceMode: (VoiceMode) -> Unit,
     resumeEntry: ResumeEntry?,
     onResumeEntry: (ResumeEntry) -> Unit,
     onDismissResume: () -> Unit,
@@ -301,13 +330,19 @@ private fun HomeShell(
                     Section.CANAIS -> ChannelsSection(home.catalog) { onPlay(it.name, it.streamUrl, false, it.logoUrl) }
                     Section.CATEGORIAS -> CategoriesSection(home.catalog, sortOrder, { openMovieId = it.id }, { openSeriesId = it.id }) { onPlay(it.name, it.streamUrl, false, it.logoUrl) }
                     Section.PESQUISA -> SearchSection(home.catalog, { openMovieId = it.id }, { openSeriesId = it.id }) { onPlay(it.name, it.streamUrl, false, it.logoUrl) }
-                    Section.IA -> AiSection(
-                        aiState,
-                        hasOpenAiKey,
-                        { configurandoChave = true },
-                        onAskAi,
-                        { openMovieId = it.id },
-                        { openSeriesId = it.id },
+                    Section.IA -> ChatScreen(
+                        catalog = home.catalog,
+                        session = chatSession,
+                        sessions = chatSessions,
+                        thinking = chatThinking,
+                        error = chatError,
+                        hasKey = hasOpenAiKey,
+                        onConfigureKey = { configurandoChave = true },
+                        onSend = onSendChat,
+                        onNewChat = onNewChat,
+                        onOpenChat = onOpenChat,
+                        onOpenMovie = { openMovieId = it.id },
+                        onOpenSeries = { openSeriesId = it.id },
                     )
                     Section.DEFINICOES -> SettingsSection(
                         updateState,
@@ -321,6 +356,8 @@ private fun HomeShell(
                         onSetSortOrder,
                         onClearCache,
                         onRefresh,
+                        voiceMode,
+                        onSetVoiceMode,
                     )
                     Section.PERFIL -> ProfileSection(account, onLogout)
                 }

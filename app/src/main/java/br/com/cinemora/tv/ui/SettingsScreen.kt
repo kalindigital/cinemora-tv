@@ -36,6 +36,7 @@ import br.com.cinemora.tv.BuildConfig
 import br.com.cinemora.tv.UpdateState
 import br.com.cinemora.tv.data.CacheTtl
 import br.com.cinemora.tv.data.SortOrder
+import br.com.cinemora.tv.data.VoiceMode
 
 @Composable
 internal fun SettingsSection(
@@ -50,6 +51,8 @@ internal fun SettingsSection(
     onSetSortOrder: (SortOrder) -> Unit,
     onClearCache: () -> Unit,
     onRefresh: () -> Unit,
+    voiceMode: VoiceMode,
+    onSetVoiceMode: (VoiceMode) -> Unit,
 ) {
     var cleared by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
@@ -89,6 +92,12 @@ internal fun SettingsSection(
         )
         Spacer(Modifier.height(10.dp))
         ActionButton(if (hasOpenAiKey) "Trocar chave (QR code)" else "Configurar chave (QR code)", onClick = onConfigureKey)
+        Spacer(Modifier.height(14.dp))
+        Text("VOZ DA IA", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            VoiceMode.entries.forEach { modo -> Chip(modo.label(), modo == voiceMode) { onSetVoiceMode(modo) } }
+        }
         Spacer(Modifier.height(18.dp))
         Text("ORDENAR OS TÍTULOS", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         Spacer(Modifier.height(8.dp))
@@ -139,6 +148,12 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
     ) {
         Text(label, color = if (selected) Color.White else Mist, fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal)
     }
+}
+
+private fun VoiceMode.label(): String = when (this) {
+    VoiceMode.GOOGLE -> "Google (rápida)"
+    VoiceMode.OPENAI -> "OpenAI (natural)"
+    VoiceMode.MUDO -> "Sem voz"
 }
 
 private fun SortOrder.label(): String = when (this) {
