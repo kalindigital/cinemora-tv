@@ -335,7 +335,13 @@ private fun Hero(
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-internal fun PosterRow(title: String, videos: List<Video>, onOpen: (Video) -> Unit, modifier: Modifier = Modifier) {
+internal fun PosterRow(
+    title: String,
+    videos: List<Video>,
+    onOpen: (Video) -> Unit,
+    modifier: Modifier = Modifier,
+    compacto: Boolean = false,
+) {
     val first = remember { FocusRequester() }
     Column {
         RowTitle(title)
@@ -348,6 +354,7 @@ internal fun PosterRow(title: String, videos: List<Video>, onOpen: (Video) -> Un
                 PosterCard(
                     video.title, ImageUrls.card(video.coverUrl), subtitle(video.year, video.rating),
                     if (index == 0) Modifier.focusRequester(first) else Modifier,
+                    compacto = compacto,
                 ) { onOpen(video) }
             }
         }
@@ -356,7 +363,13 @@ internal fun PosterRow(title: String, videos: List<Video>, onOpen: (Video) -> Un
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-internal fun SeriesRow(title: String, series: List<Series>, onOpen: (Series) -> Unit, modifier: Modifier = Modifier) {
+internal fun SeriesRow(
+    title: String,
+    series: List<Series>,
+    onOpen: (Series) -> Unit,
+    modifier: Modifier = Modifier,
+    compacto: Boolean = false,
+) {
     val first = remember { FocusRequester() }
     Column {
         RowTitle(title)
@@ -369,6 +382,7 @@ internal fun SeriesRow(title: String, series: List<Series>, onOpen: (Series) -> 
                 PosterCard(
                     item.title, ImageUrls.card(item.coverUrl), subtitle(item.year, item.rating),
                     if (index == 0) Modifier.focusRequester(first) else Modifier,
+                    compacto = compacto,
                 ) { onOpen(item) }
             }
         }

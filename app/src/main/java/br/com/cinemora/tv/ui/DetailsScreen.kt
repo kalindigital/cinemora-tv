@@ -140,7 +140,7 @@ internal fun MovieDetail(
             }
         }
       }
-      if (related.isNotEmpty()) item { PosterRow("Relacionados", related, onOpenRelated) }
+      if (related.isNotEmpty()) item { PosterRow("Relacionados", related, onOpenRelated, compacto = true) }
     }
 }
 
@@ -235,7 +235,7 @@ internal fun SeriesDetailScreen(
             }
           }
       }
-      if (related.isNotEmpty()) item { SeriesRow("Séries relacionadas", related, onOpenRelated) }
+      if (related.isNotEmpty()) item { SeriesRow("Séries relacionadas", related, onOpenRelated, compacto = true) }
     }
 }
 

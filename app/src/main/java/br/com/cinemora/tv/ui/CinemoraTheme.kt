@@ -111,10 +111,17 @@ internal fun RowTitle(text: String) = Text(
 
 /** Cartão-pôster vertical (filmes e séries), com destaque ao foco. */
 @Composable
-internal fun PosterCard(title: String, imageUrl: String?, subtitle: String?, modifier: Modifier = Modifier, onClick: () -> Unit) {
+internal fun PosterCard(
+    title: String,
+    imageUrl: String?,
+    subtitle: String?,
+    modifier: Modifier = Modifier,
+    compacto: Boolean = false,
+    onClick: () -> Unit,
+) {
     var focused by remember { mutableStateOf(false) }
     Column(
-        modifier.width(150.dp)
+        modifier.width(if (compacto) 108.dp else 150.dp)
             .onFocusChanged { focused = it.isFocused }
             .scale(if (focused) 1.06f else 1f)
             .clip(RoundedCornerShape(8.dp))
@@ -125,10 +132,12 @@ internal fun PosterCard(title: String, imageUrl: String?, subtitle: String?, mod
     ) {
         AsyncImage(
             model = imageUrl, contentDescription = title, contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().height(214.dp).background(Color(0xFF26313D)),
+            modifier = Modifier.fillMaxWidth().height(if (compacto) 154.dp else 214.dp).background(Color(0xFF26313D)),
         )
         Text(
-            title, color = Mist, fontWeight = FontWeight.Normal, minLines = 2, maxLines = 2, fontSize = 13.sp, lineHeight = 16.sp,
+            title, color = Mist, fontWeight = FontWeight.Normal,
+            minLines = if (compacto) 1 else 2, maxLines = if (compacto) 1 else 2,
+            fontSize = if (compacto) 11.sp else 13.sp, lineHeight = 16.sp,
             modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 8.dp),
         )
         if (subtitle != null) {
