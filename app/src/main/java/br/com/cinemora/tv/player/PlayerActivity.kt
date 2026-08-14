@@ -46,6 +46,7 @@ class PlayerActivity : ComponentActivity() {
     private var queueUrls: List<String> = emptyList()
     private var queueLabels: List<String> = emptyList()
     private var queueIndex = 0
+    private var confirmandoSaida = false
     private var autoNextEm = 0
     private var autoNextCancelado = false
     private var lastSeekAt = 0L
@@ -53,6 +54,7 @@ class PlayerActivity : ComponentActivity() {
     private var seekStepMs = STEP_SMALL
     private val ui = Handler(Looper.getMainLooper())
     private val hideBadge = Runnable { seekBadge.visibility = View.GONE }
+    private val limparConfirmacao = Runnable { confirmandoSaida = false }
     private val tick = object : Runnable {
         override fun run() {
             updateNextPanel()
@@ -92,15 +94,24 @@ class PlayerActivity : ComponentActivity() {
             }
         })
 
-        // Durante a contagem, Voltar cancela o avanço automático em vez de sair do player.
+        // Voltar é progressivo: cancela a contagem, fecha os controles e só sai na confirmação.
         onBackPressedDispatcher.addCallback(this) {
-            if (nextPanel.visibility == View.VISIBLE && !autoNextCancelado && autoNextEm > 0) {
-                autoNextCancelado = true
-                autoNextEm = 0
-                updateNextPanel()
-            } else {
-                isEnabled = false
-                onBackPressedDispatcher.onBackPressed()
+            when {
+                nextPanel.visibility == View.VISIBLE && !autoNextCancelado && autoNextEm > 0 -> {
+                    autoNextCancelado = true
+                    autoNextEm = 0
+                    updateNextPanel()
+                }
+                playerView.isControllerFullyVisible -> playerView.hideController()
+                !confirmandoSaida -> {
+                    confirmandoSaida = true
+                    mostrarAviso("Pressione Voltar novamente para sair")
+                    ui.postDelayed(limparConfirmacao, CONFIRM_EXIT_MS)
+                }
+                else -> {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
             }
         }
 
@@ -293,10 +304,15 @@ class PlayerActivity : ComponentActivity() {
 
     private fun showSeekBadge(direction: Int, target: Long) {
         val sinal = if (direction > 0) "+" else "−"
-        seekBadge.text = "$sinal${seekStepMs / 1000}s   ${formatTime(target)}"
+        mostrarAviso("$sinal${seekStepMs / 1000}s   ${formatTime(target)}", 1_200)
+    }
+
+    private fun mostrarAviso(texto: String, duracaoMs: Long = CONFIRM_EXIT_MS) {
+        seekBadge.text = texto
         seekBadge.visibility = View.VISIBLE
         ui.removeCallbacks(hideBadge)
-        ui.postDelayed(hideBadge, 1_200)
+        ui.removeCallbacks(limparConfirmacao)
+        ui.postDelayed(hideBadge, duracaoMs)
     }
 
     private fun formatTime(ms: Long): String {
@@ -317,6 +333,7 @@ class PlayerActivity : ComponentActivity() {
         super.onDestroy()
         ui.removeCallbacks(tick)
         ui.removeCallbacks(hideBadge)
+        ui.removeCallbacks(limparConfirmacao)
         rememberPosition()
         player.release()
     }
@@ -379,6 +396,7 @@ class PlayerActivity : ComponentActivity() {
         private const val STEP_MEDIUM = 30_000L
         private const val STEP_LARGE = 90_000L
         private const val CHAIN_WINDOW_MS = 2_000L
+        private const val CONFIRM_EXIT_MS = 3_000L
         private const val ACCENT = 0xFFE50914.toInt()
         private const val PANEL_GRAY = 0xB33A3A3A.toInt()
         private const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
