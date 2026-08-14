@@ -1,0 +1,94 @@
+package br.com.cinemora.tv
+
+import android.app.Activity
+import android.content.Intent
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import br.com.cinemora.tv.player.PlayerActivity
+import br.com.cinemora.tv.ui.CinemoraApp
+
+class MainActivity : ComponentActivity() {
+    private val viewModel: MainViewModel by viewModels()
+    private val playerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val terminou = result.resultCode == Activity.RESULT_OK &&
+            result.data?.getBooleanExtra(PlayerActivity.EXTRA_FINISHED, false) == true
+        if (terminou) viewModel.onPlaybackFinished()
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            CinemoraApp(
+                state = viewModel.state,
+                seriesDetail = viewModel.seriesDetail,
+                moviePlot = viewModel.moviePlot,
+                featuredPlot = viewModel.featuredPlot,
+                aiState = viewModel.aiState,
+                resumeMs = viewModel.resumeMs,
+                resumeOf = viewModel::resumePositionOf,
+                watchedOf = viewModel::isStreamWatched,
+                recommendations = viewModel.recommendations,
+                onCloseRecommendations = viewModel::clearRecommendations,
+                sortOrder = viewModel.sortOrder,
+                cacheTtl = viewModel.cacheTtl,
+                account = viewModel.account(),
+                onSignIn = viewModel::signIn,
+                onRetry = viewModel::returnToLogin,
+                onPlay = ::play,
+                onPlayQueue = ::playQueue,
+                onRecordWatched = viewModel::recordWatched,
+                onRemoveWatched = viewModel::removeWatched,
+                onToggleFavorite = viewModel::toggleFavorite,
+                onLoadSeriesDetail = viewModel::loadSeriesDetail,
+                onClearSeriesDetail = viewModel::clearSeriesDetail,
+                onLoadMoviePlot = viewModel::loadMoviePlot,
+                onClearMoviePlot = viewModel::clearMoviePlot,
+                onRefresh = viewModel::refresh,
+                onClearCache = viewModel::clearCache,
+                onSetCacheTtl = viewModel::changeCacheTtl,
+                onSetSortOrder = viewModel::changeSortOrder,
+                onAskAi = viewModel::askAi,
+                hasOpenAiKey = viewModel.hasOpenAiKey,
+                onSaveOpenAiKey = viewModel::saveOpenAiKey,
+                updateState = viewModel.updateState,
+                onCheckUpdate = { viewModel.checkForUpdate() },
+                onDownloadUpdate = viewModel::downloadUpdate,
+                onDismissUpdate = viewModel::dismissUpdate,
+                onLogout = viewModel::logout,
+            )
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Rede de segurança: se o player foi encerrado sem devolver resultado, o sinal
+        // gravado em disco ainda é lido aqui.
+        viewModel.onPlaybackFinished()
+    }
+
+    private fun play(title: String, url: String, restart: Boolean) =
+        playerLauncher.launch(playerIntent(title, url, restart))
+
+    /** Série: leva a fila dos próximos episódios para o player oferecer "próximo". */
+    private fun playQueue(title: String, url: String, restart: Boolean, upcoming: List<Triple<String, String, String>>) {
+        playerLauncher.launch(
+            playerIntent(title, url, restart).apply {
+                putStringArrayListExtra(PlayerActivity.EXTRA_QUEUE_TITLES, ArrayList(upcoming.map { it.first }))
+                putStringArrayListExtra(PlayerActivity.EXTRA_QUEUE_URLS, ArrayList(upcoming.map { it.second }))
+                putStringArrayListExtra(PlayerActivity.EXTRA_QUEUE_LABELS, ArrayList(upcoming.map { it.third }))
+            },
+        )
+    }
+
+    private fun playerIntent(title: String, url: String, restart: Boolean) =
+        Intent(this, PlayerActivity::class.java).apply {
+            putExtra(PlayerActivity.EXTRA_RESTART, restart)
+            putExtra(PlayerActivity.EXTRA_TITLE, title)
+            putExtra(PlayerActivity.EXTRA_URL, url)
+        }
+}
