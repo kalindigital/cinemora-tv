@@ -38,6 +38,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -75,9 +79,36 @@ import kotlinx.coroutines.launch
 internal fun movieKey(video: Video) = "m:${video.id}"
 internal fun seriesKey(series: Series) = "s:${series.id}"
 
+/**
+ * Manda o Compose alinhar no começo o item que recebe o foco.
+ *
+ * O padrão dele é rolar o mínimo necessário, o que deixava o cartão colado na borda e o
+ * anterior cortado; corrigir isso depois, na mão, criava o segundo solavanco.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun alinharNoComeco(): BringIntoViewSpec = remember {
+    object : BringIntoViewSpec {
+        override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float) = offset
+    }
+}
+
+/**
+ * Na vertical o automático atrapalha: ele mira o cartão, e alinhar o cartão no topo esconde
+ * o título da fileira. Aqui a coluna não rola sozinha — quem manda é a troca de fileira.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun semRolagemAutomatica(): BringIntoViewSpec = remember {
+    object : BringIntoViewSpec {
+        override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float) = 0f
+    }
+}
+
 private fun subtitle(year: String?, rating: String?): String? =
     listOfNotNull(year, rating).joinToString("  ·  ").ifBlank { null }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun MoviesSection(
     catalog: Catalog,
@@ -119,15 +150,10 @@ internal fun MoviesSection(
     val sinopse = if (focado != null) focadoExtra?.plot ?: focado.synopsis else featuredPlot ?: featured?.synopsis
     // Sai da aba de filmes sem deixar o destaque preso no último item focado.
     DisposableEffect(Unit) { onDispose { onFocusMovie(null) } }
-    // Rolar por fileira inteira: sem isto a fileira de cima ficava cortada ao meio.
+    // A coluna só se move quando o foco troca de fileira, e aí leva o título junto.
     var fileiraAtiva by remember { mutableStateOf(-1) }
-    // O Compose também rola sozinho para "trazer à vista" o cartão que ganhou foco, e essa
-    // rolagem chega depois da nossa. Esperar um instante deixa a última palavra com a fileira.
     LaunchedEffect(fileiraAtiva) {
-        if (fileiraAtiva >= 0) {
-            delay(120)
-            listState.animateScrollToItem(fileiraAtiva)
-        }
+        if (fileiraAtiva >= 0) listState.animateScrollToItem(fileiraAtiva)
     }
     Box(Modifier.fillMaxSize()) {
         AsyncImage(
@@ -155,6 +181,7 @@ internal fun MoviesSection(
                     modifier = Modifier.align(Alignment.BottomStart),
                 )
             }
+            CompositionLocalProvider(LocalBringIntoViewSpec provides semRolagemAutomatica()) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f),
@@ -165,13 +192,11 @@ internal fun MoviesSection(
                     PosterRow(
                         fileira.titulo, fileira.itens, onOpenMovie,
                         visual = fileira.visual, arte = arte, progresso = progresso,
-                        onFocus = { video ->
-                            onFocusMovie(video)
-                            fileiraAtiva = index
-                        },
+                        onFocus = { video -> onFocusMovie(video); fileiraAtiva = index },
                         onNeedArt = onNeedArt,
                     )
                 }
+            }
             }
         }
     }
@@ -187,6 +212,7 @@ private fun metaDoFilme(video: Video?, extra: MovieExtra?): String? {
         .joinToString("   ·   ").ifBlank { null }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun SeriesSection(
     catalog: Catalog,
@@ -220,10 +246,7 @@ internal fun SeriesSection(
     DisposableEffect(Unit) { onDispose { onFocusSeries(null) } }
     var fileiraAtiva by remember { mutableStateOf(-1) }
     LaunchedEffect(fileiraAtiva) {
-        if (fileiraAtiva >= 0) {
-            delay(120)
-            listState.animateScrollToItem(fileiraAtiva)
-        }
+        if (fileiraAtiva >= 0) listState.animateScrollToItem(fileiraAtiva)
     }
     Box(Modifier.fillMaxSize()) {
         AsyncImage(
@@ -250,6 +273,7 @@ internal fun SeriesSection(
                     modifier = Modifier.align(Alignment.BottomStart),
                 )
             }
+            CompositionLocalProvider(LocalBringIntoViewSpec provides semRolagemAutomatica()) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f),
@@ -258,13 +282,11 @@ internal fun SeriesSection(
                 itemsIndexed(rows) { index, fileira ->
                     SeriesRow(
                         fileira.titulo, fileira.itens, onOpenSeries, visual = fileira.visual, arte = arte,
-                        onFocus = { serie ->
-                            onFocusSeries(serie)
-                            fileiraAtiva = index
-                        },
+                        onFocus = { serie -> onFocusSeries(serie); fileiraAtiva = index },
                     )
                 }
                 if (catalog.series.isEmpty()) item { EmptyNotice("Seu provedor não retornou séries.") }
+            }
             }
         }
     }
@@ -495,7 +517,7 @@ private fun Hero(
 }
 
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 internal fun PosterRow(
     title: String,
@@ -509,16 +531,10 @@ internal fun PosterRow(
     onNeedArt: ((Video) -> Unit)? = null,
 ) {
     val first = remember { FocusRequester() }
-    val rowState = rememberLazyListState()
-    // O item em foco vai para o começo da fileira; no fim da lista o Compose para onde dá.
-    var itemAtivo by remember { mutableStateOf(-1) }
-    LaunchedEffect(itemAtivo) {
-        if (itemAtivo >= 0) rowState.animateScrollToItem(itemAtivo)
-    }
     Column {
         RowTitle(title)
+        CompositionLocalProvider(LocalBringIntoViewSpec provides alinharNoComeco()) {
         LazyRow(
-            state = rowState,
             modifier = modifier.focusGroup().focusProperties { onEnter = { first.requestFocus() } },
             contentPadding = PaddingValues(horizontal = 32.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -535,14 +551,15 @@ internal fun PosterRow(
                     visual = visual,
                     arteLarga = arteLarga,
                     progresso = progresso[video.streamUrl],
-                    onFocus = { itemAtivo = index; onFocus?.invoke(video) },
+                    onFocus = onFocus?.let { avisar -> { avisar(video) } },
                 ) { onOpen(video) }
             }
+        }
         }
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 internal fun SeriesRow(
     title: String,
@@ -554,15 +571,10 @@ internal fun SeriesRow(
     onFocus: ((Series) -> Unit)? = null,
 ) {
     val first = remember { FocusRequester() }
-    val rowState = rememberLazyListState()
-    var itemAtivo by remember { mutableStateOf(-1) }
-    LaunchedEffect(itemAtivo) {
-        if (itemAtivo >= 0) rowState.animateScrollToItem(itemAtivo)
-    }
     Column {
         RowTitle(title)
+        CompositionLocalProvider(LocalBringIntoViewSpec provides alinharNoComeco()) {
         LazyRow(
-            state = rowState,
             modifier = modifier.focusGroup().focusProperties { onEnter = { first.requestFocus() } },
             contentPadding = PaddingValues(horizontal = 32.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -576,26 +588,22 @@ internal fun SeriesRow(
                     if (index == 0) Modifier.focusRequester(first) else Modifier,
                     visual = visual,
                     arteLarga = arteLarga,
-                    onFocus = { itemAtivo = index; onFocus?.invoke(item) },
+                    onFocus = onFocus?.let { avisar -> { avisar(item) } },
                 ) { onOpen(item) }
             }
+        }
         }
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun ChannelRow(title: String, channels: List<Channel>, onPlay: (Channel) -> Unit) {
     val first = remember { FocusRequester() }
-    val rowState = rememberLazyListState()
-    var itemAtivo by remember { mutableStateOf(-1) }
-    LaunchedEffect(itemAtivo) {
-        if (itemAtivo >= 0) rowState.animateScrollToItem(itemAtivo)
-    }
     Column {
         RowTitle(title)
+        CompositionLocalProvider(LocalBringIntoViewSpec provides alinharNoComeco()) {
         LazyRow(
-            state = rowState,
             modifier = Modifier.focusGroup().focusProperties { onEnter = { first.requestFocus() } },
             contentPadding = PaddingValues(horizontal = 32.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -604,9 +612,9 @@ private fun ChannelRow(title: String, channels: List<Channel>, onPlay: (Channel)
                 ChannelCard(
                     channel.name, ImageUrls.card(channel.logoUrl),
                     if (index == 0) Modifier.focusRequester(first) else Modifier,
-                    onFocus = { itemAtivo = index },
                 ) { onPlay(channel) }
             }
+        }
         }
     }
 }
