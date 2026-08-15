@@ -69,6 +69,7 @@ import br.com.cinemora.tv.model.Credentials
 import br.com.cinemora.tv.model.Series
 import br.com.cinemora.tv.model.Video
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 internal fun movieKey(video: Video) = "m:${video.id}"
@@ -114,9 +115,16 @@ internal fun MoviesSection(
     val sinopse = if (focado != null) focadoExtra?.plot ?: focado.synopsis else featuredPlot ?: featured?.synopsis
     // Sai da aba de filmes sem deixar o destaque preso no último item focado.
     DisposableEffect(Unit) { onDispose { onFocusMovie(null) } }
-    val scope = rememberCoroutineScope()
     // Rolar por fileira inteira: sem isto a fileira de cima ficava cortada ao meio.
     var fileiraAtiva by remember { mutableStateOf(-1) }
+    // O Compose também rola sozinho para "trazer à vista" o cartão que ganhou foco, e essa
+    // rolagem chega depois da nossa. Esperar um instante deixa a última palavra com a fileira.
+    LaunchedEffect(fileiraAtiva) {
+        if (fileiraAtiva >= 0) {
+            delay(120)
+            listState.animateScrollToItem(fileiraAtiva)
+        }
+    }
     Box(Modifier.fillMaxSize()) {
         AsyncImage(
             model = ImageUrls.backdrop(focadoExtra?.backdrop) ?: ImageUrls.detail(alvo?.coverUrl),
@@ -154,10 +162,7 @@ internal fun MoviesSection(
                         title, videos, onOpenMovie, visual = CardVisual.LARGO, arte = arte,
                         onFocus = { video ->
                             onFocusMovie(video)
-                            if (index != fileiraAtiva) {
-                                fileiraAtiva = index
-                                scope.launch { listState.animateScrollToItem(index) }
-                            }
+                            fileiraAtiva = index
                         },
                         onNeedArt = onNeedArt,
                     )
