@@ -77,3 +77,7 @@ Plano: docs/PLANO-catalogo-navegacao-cache.md
 - [x] Cartões da aba Filmes em 16:9, fontes menores e destaque sem botão (o cartão já abre o filme).
 - [x] Arte 16:9 real também nos cartões, buscada só para o que aparece na tela e guardada em disco.
 - [x] Cartão de filme sem texto: nome, ano e nota ficam apenas no destaque do topo.
+- [x] Arte do destaque em tela cheia, com as fileiras por cima e degradê para o texto.
+- [x] Rolagem por fileira: a fileira em foco sobe para o topo, sem deixar meia fileira cortada.
+- [x] Cartão 16:9 menor, com o nome escrito sobre a arte.
+- [x] Aba Categorias com pôster solto (sem painel), nome e dados embaixo.

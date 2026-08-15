@@ -114,25 +114,54 @@ internal fun MoviesSection(
     val sinopse = if (focado != null) focadoExtra?.plot ?: focado.synopsis else featuredPlot ?: featured?.synopsis
     // Sai da aba de filmes sem deixar o destaque preso no último item focado.
     DisposableEffect(Unit) { onDispose { onFocusMovie(null) } }
-    Column(Modifier.fillMaxSize()) {
-        Hero(
-            title = alvo?.title,
-            synopsis = sinopse,
-            // A arte 16:9 chega depois do get_vod_info; até lá a capa evita o buraco preto.
-            imageUrl = ImageUrls.backdrop(focadoExtra?.backdrop) ?: ImageUrls.detail(alvo?.coverUrl),
-            // Sem botão: o destaque é vitrine, quem abre o filme é o cartão em foco.
-            actionLabel = "",
-            onAction = null,
-            modifier = Modifier.fillMaxHeight(0.44f),
-            eyebrow = if (focado == null) "SELEÇÃO DO DIA" else focadoExtra?.genre?.uppercase() ?: "EM DESTAQUE",
-            meta = metaDoFilme(alvo, focadoExtra),
+    val scope = rememberCoroutineScope()
+    // Rolar por fileira inteira: sem isto a fileira de cima ficava cortada ao meio.
+    var fileiraAtiva by remember { mutableStateOf(-1) }
+    Box(Modifier.fillMaxSize()) {
+        AsyncImage(
+            model = ImageUrls.backdrop(focadoExtra?.backdrop) ?: ImageUrls.detail(alvo?.coverUrl),
+            contentDescription = alvo?.title, contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().background(Ink),
         )
-        LazyColumn(state = listState, modifier = Modifier.weight(1f), contentPadding = PaddingValues(bottom = 48.dp)) {
-            items(rows) { (title, videos) ->
-                PosterRow(
-                    title, videos, onOpenMovie, largo = true,
-                    arte = arte, onFocus = onFocusMovie, onNeedArt = onNeedArt,
+        // A arte ocupa a tela inteira; os degradês devolvem contraste ao texto e às fileiras.
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0f to Color(0x99050307), 0.28f to Color(0x33050307),
+                    0.50f to Color(0xCC070A0D), 0.66f to Color(0xF2070A0D), 1f to Ink,
+                ),
+            ),
+        )
+        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Ink, Color(0x00070A0D)))))
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxWidth().fillMaxHeight(0.44f)) {
+                InfoDestaque(
+                    eyebrow = if (focado == null) "SELEÇÃO DO DIA" else focadoExtra?.genre?.uppercase() ?: "EM DESTAQUE",
+                    title = alvo?.title,
+                    meta = metaDoFilme(alvo, focadoExtra),
+                    synopsis = sinopse,
+                    modifier = Modifier.align(Alignment.BottomStart),
                 )
+            }
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f),
+                // Folga no fim para a última fileira também conseguir subir até o topo.
+                contentPadding = PaddingValues(bottom = 220.dp),
+            ) {
+                itemsIndexed(rows) { index, (title, videos) ->
+                    PosterRow(
+                        title, videos, onOpenMovie, visual = CardVisual.LARGO, arte = arte,
+                        onFocus = { video ->
+                            onFocusMovie(video)
+                            if (index != fileiraAtiva) {
+                                fileiraAtiva = index
+                                scope.launch { listState.animateScrollToItem(index) }
+                            }
+                        },
+                        onNeedArt = onNeedArt,
+                    )
+                }
             }
         }
     }
@@ -214,11 +243,15 @@ internal fun CategoriesSection(
     LazyColumn(state = listState, contentPadding = PaddingValues(top = 12.dp, bottom = 48.dp)) {
         items(catalog.movieCategories) { category ->
             val videos = catalog.movies.filter { it.categoryId == category.id }
-            if (videos.isNotEmpty()) PosterRow(category.name, CatalogSorter.movies(videos, sortOrder), onOpenMovie)
+            if (videos.isNotEmpty()) {
+                PosterRow(category.name, CatalogSorter.movies(videos, sortOrder), onOpenMovie, visual = CardVisual.LIMPO)
+            }
         }
         items(catalog.seriesCategories) { category ->
             val series = catalog.series.filter { it.categoryId == category.id }
-            if (series.isNotEmpty()) SeriesRow(category.name, CatalogSorter.series(series, sortOrder), onOpenSeries)
+            if (series.isNotEmpty()) {
+                SeriesRow(category.name, CatalogSorter.series(series, sortOrder), onOpenSeries, visual = CardVisual.LIMPO)
+            }
         }
         items(catalog.liveCategories) { category ->
             val channels = catalog.channels.filter { it.categoryId == category.id }
@@ -279,6 +312,40 @@ private fun InfoLine(label: String, value: String) {
         Text(label, color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         Spacer(Modifier.height(4.dp))
         Text(value, color = Mist, fontSize = 18.sp)
+    }
+}
+
+/** Bloco de textos do destaque: tarja, nome, dados e sinopse. */
+@Composable
+private fun InfoDestaque(
+    eyebrow: String,
+    title: String?,
+    meta: String?,
+    synopsis: String?,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier.padding(start = 32.dp, end = 24.dp, bottom = 22.dp).widthIn(max = 620.dp)) {
+        Text(
+            eyebrow, color = Signal, fontSize = 11.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            title ?: "Seu catálogo está pronto", color = Mist, fontSize = 26.sp, lineHeight = 30.sp,
+            fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
+        )
+        if (meta != null) {
+            Spacer(Modifier.height(6.dp))
+            Text(meta, color = Color(0xFF9AA7B4), fontSize = 12.sp, maxLines = 1)
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            // Com um título em foco e a sinopse ainda a caminho, a linha fica vazia:
+            // o convite só cabe quando não há nada selecionado.
+            synopsis?.takeIf { it.isNotBlank() }
+                ?: if (title == null) "Escolha um título nas fileiras abaixo para começar." else "",
+            color = Color(0xFFC4CED8), maxLines = 3, fontSize = 13.sp, lineHeight = 19.sp,
+        )
     }
 }
 
@@ -375,8 +442,7 @@ internal fun PosterRow(
     videos: List<Video>,
     onOpen: (Video) -> Unit,
     modifier: Modifier = Modifier,
-    compacto: Boolean = false,
-    largo: Boolean = false,
+    visual: CardVisual = CardVisual.PADRAO,
     arte: Map<String, String> = emptyMap(),
     onFocus: ((Video) -> Unit)? = null,
     onNeedArt: ((Video) -> Unit)? = null,
@@ -397,8 +463,7 @@ internal fun PosterRow(
                     arte[video.id]?.let { ImageUrls.detail(it) } ?: ImageUrls.card(video.coverUrl),
                     subtitle(video.year, video.rating),
                     if (index == 0) Modifier.focusRequester(first) else Modifier,
-                    compacto = compacto,
-                    largo = largo,
+                    visual = visual,
                     onFocus = onFocus?.let { avisar -> { avisar(video) } },
                 ) { onOpen(video) }
             }
@@ -413,7 +478,7 @@ internal fun SeriesRow(
     series: List<Series>,
     onOpen: (Series) -> Unit,
     modifier: Modifier = Modifier,
-    compacto: Boolean = false,
+    visual: CardVisual = CardVisual.PADRAO,
 ) {
     val first = remember { FocusRequester() }
     Column {
@@ -427,7 +492,7 @@ internal fun SeriesRow(
                 PosterCard(
                     item.title, ImageUrls.card(item.coverUrl), subtitle(item.year, item.rating),
                     if (index == 0) Modifier.focusRequester(first) else Modifier,
-                    compacto = compacto,
+                    visual = visual,
                 ) { onOpen(item) }
             }
         }
