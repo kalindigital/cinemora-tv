@@ -75,6 +75,9 @@ import kotlinx.coroutines.launch
 internal fun movieKey(video: Video) = "m:${video.id}"
 internal fun seriesKey(series: Series) = "s:${series.id}"
 
+/** Espera antes de alinhar: o Compose também rola sozinho ao mover o foco. */
+private const val ESPERA_ALINHAR = 120L
+
 private fun subtitle(year: String?, rating: String?): String? =
     listOfNotNull(year, rating).joinToString("  ·  ").ifBlank { null }
 
@@ -509,9 +512,19 @@ internal fun PosterRow(
     onNeedArt: ((Video) -> Unit)? = null,
 ) {
     val first = remember { FocusRequester() }
+    val rowState = rememberLazyListState()
+    // O item em foco vai para o começo da fileira; no fim da lista o Compose para onde dá.
+    var itemAtivo by remember { mutableStateOf(-1) }
+    LaunchedEffect(itemAtivo) {
+        if (itemAtivo >= 0) {
+            delay(ESPERA_ALINHAR)
+            rowState.animateScrollToItem(itemAtivo)
+        }
+    }
     Column {
         RowTitle(title)
         LazyRow(
+            state = rowState,
             modifier = modifier.focusGroup().focusProperties { onEnter = { first.requestFocus() } },
             contentPadding = PaddingValues(horizontal = 32.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -528,7 +541,7 @@ internal fun PosterRow(
                     visual = visual,
                     arteLarga = arteLarga,
                     progresso = progresso[video.streamUrl],
-                    onFocus = onFocus?.let { avisar -> { avisar(video) } },
+                    onFocus = { itemAtivo = index; onFocus?.invoke(video) },
                 ) { onOpen(video) }
             }
         }
@@ -547,9 +560,18 @@ internal fun SeriesRow(
     onFocus: ((Series) -> Unit)? = null,
 ) {
     val first = remember { FocusRequester() }
+    val rowState = rememberLazyListState()
+    var itemAtivo by remember { mutableStateOf(-1) }
+    LaunchedEffect(itemAtivo) {
+        if (itemAtivo >= 0) {
+            delay(ESPERA_ALINHAR)
+            rowState.animateScrollToItem(itemAtivo)
+        }
+    }
     Column {
         RowTitle(title)
         LazyRow(
+            state = rowState,
             modifier = modifier.focusGroup().focusProperties { onEnter = { first.requestFocus() } },
             contentPadding = PaddingValues(horizontal = 32.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -563,7 +585,7 @@ internal fun SeriesRow(
                     if (index == 0) Modifier.focusRequester(first) else Modifier,
                     visual = visual,
                     arteLarga = arteLarga,
-                    onFocus = onFocus?.let { avisar -> { avisar(item) } },
+                    onFocus = { itemAtivo = index; onFocus?.invoke(item) },
                 ) { onOpen(item) }
             }
         }
@@ -574,9 +596,18 @@ internal fun SeriesRow(
 @Composable
 private fun ChannelRow(title: String, channels: List<Channel>, onPlay: (Channel) -> Unit) {
     val first = remember { FocusRequester() }
+    val rowState = rememberLazyListState()
+    var itemAtivo by remember { mutableStateOf(-1) }
+    LaunchedEffect(itemAtivo) {
+        if (itemAtivo >= 0) {
+            delay(ESPERA_ALINHAR)
+            rowState.animateScrollToItem(itemAtivo)
+        }
+    }
     Column {
         RowTitle(title)
         LazyRow(
+            state = rowState,
             modifier = Modifier.focusGroup().focusProperties { onEnter = { first.requestFocus() } },
             contentPadding = PaddingValues(horizontal = 32.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -585,6 +616,7 @@ private fun ChannelRow(title: String, channels: List<Channel>, onPlay: (Channel)
                 ChannelCard(
                     channel.name, ImageUrls.card(channel.logoUrl),
                     if (index == 0) Modifier.focusRequester(first) else Modifier,
+                    onFocus = { itemAtivo = index },
                 ) { onPlay(channel) }
             }
         }

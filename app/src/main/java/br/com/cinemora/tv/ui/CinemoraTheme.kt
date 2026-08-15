@@ -277,11 +277,20 @@ internal fun PosterCard(
 
 /** Cartão de canal ao vivo, com o logo centralizado. */
 @Composable
-internal fun ChannelCard(name: String, logoUrl: String?, modifier: Modifier = Modifier, onClick: () -> Unit) {
+internal fun ChannelCard(
+    name: String,
+    logoUrl: String?,
+    modifier: Modifier = Modifier,
+    onFocus: (() -> Unit)? = null,
+    onClick: () -> Unit,
+) {
     var focused by remember { mutableStateOf(false) }
     Column(
         modifier.width(176.dp)
-            .onFocusChanged { focused = it.isFocused }
+            .onFocusChanged {
+                focused = it.isFocused
+                if (it.isFocused) onFocus?.invoke()
+            }
             .scale(if (focused) 1.06f else 1f)
             .clip(RoundedCornerShape(8.dp))
             .background(Panel)
