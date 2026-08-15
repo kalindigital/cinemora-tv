@@ -344,8 +344,8 @@ private fun Sugestoes(
         }
     }
     Column {
-        if (filmes.isNotEmpty()) PosterRow("No seu catálogo", filmes, onOpenMovie, visual = CardVisual.COMPACTO)
-        if (series.isNotEmpty()) SeriesRow("Séries no seu catálogo", series, onOpenSeries, visual = CardVisual.COMPACTO)
+        if (filmes.isNotEmpty()) PosterRow("No seu catálogo", filmes, onOpenMovie, visual = CardVisual.LIMPO)
+        if (series.isNotEmpty()) SeriesRow("Séries no seu catálogo", series, onOpenSeries, visual = CardVisual.LIMPO)
     }
 }
 
