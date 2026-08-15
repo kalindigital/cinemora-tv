@@ -87,3 +87,6 @@ Plano: docs/PLANO-catalogo-navegacao-cache.md
 - [x] Fileira "Seleção do dia" com 10 títulos em arte 16:9 fixa, no topo de Filmes e Séries.
 - [x] Barra de progresso nos cartões de "Continuar assistindo".
 - [x] Aba Séries com arte de fundo em tela cheia e destaque que segue o foco.
+- [x] Detalhe de filme e série com a arte ocupando a tela, botão principal em pílula e opções em lista.
+- [x] Tela própria de episódios: temporadas de um lado, episódios com miniatura, sinopse e duração do outro.
+- [x] Arte da Seleção do dia buscada assim que o catálogo carrega, para o cartão não abrir com a capa.

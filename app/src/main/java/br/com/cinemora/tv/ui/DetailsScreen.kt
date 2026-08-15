@@ -26,7 +26,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.Button
@@ -54,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import br.com.cinemora.tv.DetailState
 import br.com.cinemora.tv.data.EpisodeQueue
 import br.com.cinemora.tv.data.ImageUrls
+import br.com.cinemora.tv.data.MovieExtra
 import br.com.cinemora.tv.model.Episode
 import br.com.cinemora.tv.model.Season
 import br.com.cinemora.tv.model.Series
@@ -65,6 +71,7 @@ import kotlinx.coroutines.launch
 internal fun MovieDetail(
     video: Video,
     plot: String?,
+    extra: MovieExtra?,
     isFavorite: Boolean,
     isWatched: Boolean,
     resumeMs: Long,
@@ -82,67 +89,78 @@ internal fun MovieDetail(
     LaunchedEffect(video.id) { runCatching { playFocus.requestFocus() } }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    LazyColumn(
-        Modifier.fillMaxSize().background(Ink),
-        state = listState,
-        contentPadding = PaddingValues(bottom = 40.dp),
-    ) {
-      item {
-        Row(
-            Modifier.fillMaxWidth()
-                // Voltando dos relacionados, o Compose traz só o botão focado para a tela e o
-                // título ficava acima do corte: aqui a página volta ao topo.
-                .onFocusChanged { if (it.hasFocus) scope.launch { listState.animateScrollToItem(0) } }
-                .padding(start = 40.dp, top = 28.dp, end = 40.dp, bottom = 8.dp),
+    val emAndamento = resumeMs > 0
+    DetalheFundo(ImageUrls.backdrop(extra?.backdrop) ?: ImageUrls.detail(video.coverUrl), video.title) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            state = listState,
+            contentPadding = PaddingValues(bottom = 32.dp),
         ) {
-            AsyncImage(
-                model = ImageUrls.detail(video.coverUrl), contentDescription = video.title, contentScale = ContentScale.Crop,
-                modifier = Modifier.width(150.dp).height(222.dp).clip(RoundedCornerShape(10.dp)).background(Panel),
-            )
-            Column(Modifier.padding(start = 26.dp)) {
-                Text(video.title, color = Mist, fontSize = 28.sp, lineHeight = 32.sp, fontWeight = FontWeight.ExtraBold, maxLines = 2)
-                val meta = listOfNotNull(video.year, video.rating?.let { "★ $it" }).joinToString("   ·   ")
-                if (meta.isNotBlank()) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(meta, color = Signal, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.height(10.dp))
-                val synopsis = when {
-                    plot == null -> "Carregando sinopse…"
-                    plot.isBlank() -> "Sem sinopse disponível."
-                    else -> plot
-                }
-                Text(synopsis, color = Color(0xFFC9C2CB), fontSize = 14.sp, lineHeight = 20.sp, maxLines = 4)
-                Spacer(Modifier.height(14.dp))
-                val emAndamento = resumeMs > 0
-                if (emAndamento) {
+            item {
+                Column(
+                    Modifier.fillMaxWidth(0.55f)
+                        // Voltando dos relacionados, o Compose traz só o botão focado para a tela:
+                        // aqui a página volta ao topo.
+                        .onFocusChanged { if (it.hasFocus) scope.launch { listState.animateScrollToItem(0) } }
+                        .padding(start = 44.dp, top = 44.dp, end = 20.dp),
+                ) {
                     Text(
-                        "Você parou em ${formatPosition(resumeMs)}.",
-                        color = Muted, fontSize = 13.sp, modifier = Modifier.padding(bottom = 10.dp),
+                        video.title, color = Mist, fontSize = 34.sp, lineHeight = 38.sp,
+                        fontWeight = FontWeight.ExtraBold, maxLines = 3,
                     )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ActionButton(
-                        if (emAndamento) "Continuar" else "Assistir",
-                        modifier = Modifier.focusRequester(playFocus),
-                        icon = Icons.Rounded.PlayArrow,
-                    ) { onRecordWatched(video.id); onPlay(video.title, video.streamUrl, false, video.coverUrl) }
-                    if (emAndamento) {
-                        ActionButton("Reiniciar") { onRecordWatched(video.id); onPlay(video.title, video.streamUrl, true, video.coverUrl) }
-                    }
-                    FavoriteButton(isFavorite, onToggleFavorite)
-                    ActionButton("Vale a pena?", onClick = onAskVerdict)
-                    ActionButton("Voltar", onClick = onClose)
-                }
-                // Basta estar no histórico: nem todo assistido tem posição salva.
-                if (isWatched) {
                     Spacer(Modifier.height(10.dp))
-                    ActionButton("Remover dos assistidos", onClick = onRemoveWatched)
+                    Text(
+                        linhaDeDados(video.year, extra?.genre, extra?.duration, video.rating?.let { "★ $it" }),
+                        color = Color(0xFF9AA7B4), fontSize = 13.sp,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    val synopsis = when {
+                        plot == null -> "Carregando sinopse…"
+                        plot.isBlank() -> "Sem sinopse disponível."
+                        else -> plot
+                    }
+                    Text(synopsis, color = Color(0xFFC4CED8), fontSize = 14.sp, lineHeight = 20.sp, maxLines = 4)
+                    extra?.cast?.let {
+                        Spacer(Modifier.height(10.dp))
+                        Text("Elenco: $it", color = Muted, fontSize = 12.sp, maxLines = 2)
+                    }
+                    extra?.director?.let {
+                        Spacer(Modifier.height(3.dp))
+                        Text("Direção: $it", color = Muted, fontSize = 12.sp, maxLines = 1)
+                    }
+                    if (emAndamento) {
+                        Spacer(Modifier.height(10.dp))
+                        Text("Você parou em ${formatPosition(resumeMs)}.", color = Muted, fontSize = 12.sp)
+                    }
+                    Spacer(Modifier.height(18.dp))
+                    BotaoPrincipal(
+                        if (emAndamento) "Continuar de ${formatPosition(resumeMs)}" else "Assistir",
+                        Icons.Rounded.PlayArrow,
+                        Modifier.focusRequester(playFocus),
+                    ) { onRecordWatched(video.id); onPlay(video.title, video.streamUrl, false, video.coverUrl) }
+                    Spacer(Modifier.height(6.dp))
+                    if (emAndamento) {
+                        OpcaoMenu("Assistir do começo", Icons.Rounded.Refresh) {
+                            onRecordWatched(video.id); onPlay(video.title, video.streamUrl, true, video.coverUrl)
+                        }
+                    }
+                    OpcaoMenu(
+                        if (isFavorite) "Nos favoritos" else "Favoritar",
+                        if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                        onClick = onToggleFavorite,
+                    )
+                    OpcaoMenu("Vale a pena?", Icons.Rounded.AutoAwesome, onClick = onAskVerdict)
+                    if (isWatched) {
+                        // Basta estar no histórico: nem todo assistido tem posição salva.
+                        OpcaoMenu("Remover dos assistidos", Icons.Rounded.Delete, onClick = onRemoveWatched)
+                    }
+                    OpcaoMenu("Voltar", Icons.Rounded.ArrowBack, onClick = onClose)
                 }
             }
+            if (related.isNotEmpty()) {
+                item { PosterRow("Títulos semelhantes", related, onOpenRelated, visual = CardVisual.COMPACTO) }
+            }
         }
-      }
-      if (related.isNotEmpty()) item { PosterRow("Relacionados", related, onOpenRelated, visual = CardVisual.COMPACTO) }
     }
 }
 
@@ -152,6 +170,7 @@ internal fun SeriesDetailScreen(
     state: DetailState,
     isFavorite: Boolean,
     resumeOf: (String) -> Long,
+    progressoDe: (String) -> Float?,
     watchedOf: (String) -> Boolean,
     onLoad: () -> Unit,
     onPlayEpisode: (Episode, Boolean, List<Episode>) -> Unit,
@@ -161,10 +180,11 @@ internal fun SeriesDetailScreen(
     onOpenRelated: (Series) -> Unit,
     onAskRecap: (Int, Int) -> Unit,
 ) {
-    BackHandler(onBack = onClose)
     LaunchedEffect(series.id) { onLoad() }
     var escolhendo by remember { mutableStateOf<Episode?>(null) }
+    var vendoEpisodios by remember(series.id) { mutableStateOf(false) }
     val seasons = (state as? DetailState.Loaded)?.detail?.seasons.orEmpty()
+    val extra = (state as? DetailState.Loaded)?.detail?.extra
 
     escolhendo?.let { episode ->
         val proximos = EpisodeQueue.upcoming(seasons, episode.id)
@@ -178,157 +198,101 @@ internal fun SeriesDetailScreen(
         return
     }
 
-    // Só a página rola: temporadas e episódios são colunas comuns. Listas roláveis
-    // aninhadas brigavam com a rolagem da página e faziam o foco pular sozinho.
-    val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    LazyColumn(
-        Modifier.fillMaxSize().background(Ink),
-        state = listState,
-        contentPadding = PaddingValues(bottom = 32.dp),
-    ) {
-      item {
-        Row(
-            Modifier.fillMaxWidth()
-                .onFocusChanged { if (it.hasFocus) scope.launch { listState.animateScrollToItem(0) } }
-                .padding(start = 40.dp, top = 28.dp, end = 40.dp),
-        ) {
-            AsyncImage(
-                model = ImageUrls.detail(series.coverUrl), contentDescription = series.title, contentScale = ContentScale.Crop,
-                modifier = Modifier.width(126.dp).height(186.dp).clip(RoundedCornerShape(10.dp)).background(Panel),
-            )
-            Column(Modifier.padding(start = 26.dp)) {
-                Text(series.title, color = Mist, fontSize = 30.sp, lineHeight = 34.sp, fontWeight = FontWeight.ExtraBold)
-                val meta = listOfNotNull(series.year, series.rating?.let { "★ $it" }).joinToString("   ·   ")
-                if (meta.isNotBlank()) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(meta, color = Signal, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.height(12.dp))
-                Text(series.synopsis ?: "Sem sinopse disponível.", color = Color(0xFFC9C2CB), fontSize = 14.sp, lineHeight = 20.sp, maxLines = 3)
-                Spacer(Modifier.height(16.dp))
-                val continuarEm = EpisodeQueue.resumeTarget(seasons, watchedOf, resumeOf)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (continuarEm != null) {
-                        ActionButton(
-                            "Continuar T${continuarEm.season} E${continuarEm.episode}",
-                            icon = Icons.Rounded.PlayArrow,
-                        ) {
-                            onPlayEpisode(continuarEm, false, EpisodeQueue.upcoming(seasons, continuarEm.id))
-                        }
-                    }
-                    FavoriteButton(isFavorite, onToggleFavorite)
-                    if (continuarEm != null && (continuarEm.episode > 1 || continuarEm.season > 1)) {
-                        ActionButton("Onde eu parei?") { onAskRecap(continuarEm.season, continuarEm.episode) }
-                    }
-                    ActionButton("Voltar", onClick = onClose)
-                }
-            }
-        }
-      }
-      item {
-          when (state) {
-            DetailState.Loading -> Notice("Carregando episódios…")
-            is DetailState.Failed -> Notice(state.message)
-            DetailState.Idle -> Unit
-            is DetailState.Loaded -> SeasonsAndEpisodes(state.detail.seasons, resumeOf, watchedOf) { episode ->
+    if (vendoEpisodios && seasons.isNotEmpty()) {
+        EpisodesScreen(
+            series = series,
+            seasons = seasons,
+            arte = extra?.backdrop,
+            progressoDe = progressoDe,
+            watchedOf = watchedOf,
+            onPlayEpisode = { episode ->
                 // Episódio já começado pergunta; os demais tocam direto.
                 if (resumeOf(episode.streamUrl) > 0) {
                     escolhendo = episode
                 } else {
                     onPlayEpisode(episode, false, EpisodeQueue.upcoming(seasons, episode.id))
                 }
-            }
-          }
-      }
-      if (related.isNotEmpty()) item { SeriesRow("Séries relacionadas", related, onOpenRelated, visual = CardVisual.COMPACTO) }
+            },
+            onClose = { vendoEpisodios = false },
+        )
+        return
     }
-}
 
-@Composable
-private fun SeasonsAndEpisodes(
-    seasons: List<Season>,
-    resumeOf: (String) -> Long,
-    watchedOf: (String) -> Boolean,
-    onPlayEpisode: (Episode) -> Unit,
-) {
-    var selectedNumber by remember(seasons) { mutableStateOf(seasons.firstOrNull()?.number) }
-    val current = seasons.firstOrNull { it.number == selectedNumber } ?: seasons.firstOrNull()
-    val firstSeason = remember { FocusRequester() }
-    LaunchedEffect(seasons) { runCatching { firstSeason.requestFocus() } }
-    Row(Modifier.fillMaxWidth().padding(start = 40.dp, top = 10.dp, end = 40.dp)) {
-        Column(Modifier.width(210.dp).padding(end = 10.dp)) {
-            SectionLabel("TEMPORADAS")
-            seasons.forEachIndexed { index, season ->
-                val vistos = season.episodes.count { watchedOf(it.streamUrl) }
-                SeasonRow(
-                    "Temporada ${season.number}",
-                    if (vistos > 0) "$vistos/${season.episodes.size} vistos" else null,
-                    season.number == selectedNumber,
-                    if (index == 0) Modifier.focusRequester(firstSeason) else Modifier,
-                ) { selectedNumber = season.number }
+    BackHandler(onBack = onClose)
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val playFocus = remember { FocusRequester() }
+    LaunchedEffect(series.id) { runCatching { playFocus.requestFocus() } }
+    val continuarEm = EpisodeQueue.resumeTarget(seasons, watchedOf, resumeOf)
+    DetalheFundo(ImageUrls.backdrop(extra?.backdrop) ?: ImageUrls.detail(series.coverUrl), series.title) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            state = listState,
+            contentPadding = PaddingValues(bottom = 32.dp),
+        ) {
+            item {
+                Column(
+                    Modifier.fillMaxWidth(0.55f)
+                        .onFocusChanged { if (it.hasFocus) scope.launch { listState.animateScrollToItem(0) } }
+                        .padding(start = 44.dp, top = 44.dp, end = 20.dp),
+                ) {
+                    Text(
+                        series.title, color = Mist, fontSize = 34.sp, lineHeight = 38.sp,
+                        fontWeight = FontWeight.ExtraBold, maxLines = 3,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    val temporadas = seasons.size.takeIf { it > 0 }
+                        ?.let { "$it temporada${if (it > 1) "s" else ""}" }
+                    Text(
+                        linhaDeDados(series.year, extra?.genre, temporadas, series.rating?.let { "★ $it" }),
+                        color = Color(0xFF9AA7B4), fontSize = 13.sp,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        extra?.plot ?: series.synopsis ?: "Sem sinopse disponível.",
+                        color = Color(0xFFC4CED8), fontSize = 14.sp, lineHeight = 20.sp, maxLines = 4,
+                    )
+                    extra?.cast?.let {
+                        Spacer(Modifier.height(10.dp))
+                        Text("Elenco: $it", color = Muted, fontSize = 12.sp, maxLines = 2)
+                    }
+                    Spacer(Modifier.height(18.dp))
+                    when (state) {
+                        DetailState.Loading -> Notice("Carregando episódios…")
+                        is DetailState.Failed -> Notice(state.message)
+                        else -> Unit
+                    }
+                    if (continuarEm != null) {
+                        val rotulo = if (resumeOf(continuarEm.streamUrl) > 0) {
+                            "Continuar T${continuarEm.season}:E${continuarEm.episode}"
+                        } else {
+                            "Assistir T${continuarEm.season}:E${continuarEm.episode}"
+                        }
+                        BotaoPrincipal(rotulo, Icons.Rounded.PlayArrow, Modifier.focusRequester(playFocus)) {
+                            onPlayEpisode(continuarEm, false, EpisodeQueue.upcoming(seasons, continuarEm.id))
+                        }
+                        Spacer(Modifier.height(6.dp))
+                    }
+                    if (seasons.isNotEmpty()) {
+                        OpcaoMenu("Ver episódios", Icons.Rounded.Menu) { vendoEpisodios = true }
+                    }
+                    OpcaoMenu(
+                        if (isFavorite) "Nos favoritos" else "Favoritar",
+                        if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                        onClick = onToggleFavorite,
+                    )
+                    if (continuarEm != null && (continuarEm.episode > 1 || continuarEm.season > 1)) {
+                        OpcaoMenu("Onde eu parei?", Icons.Rounded.AutoAwesome) {
+                            onAskRecap(continuarEm.season, continuarEm.episode)
+                        }
+                    }
+                    OpcaoMenu("Voltar", Icons.Rounded.ArrowBack, onClick = onClose)
+                }
+            }
+            if (related.isNotEmpty()) {
+                item { SeriesRow("Títulos semelhantes", related, onOpenRelated, visual = CardVisual.COMPACTO) }
             }
         }
-        Spacer(Modifier.width(18.dp))
-        Column(Modifier.weight(1f)) {
-            SectionLabel("EPISÓDIOS")
-            current?.episodes.orEmpty().forEach { episode ->
-                EpisodeRow(
-                    episode,
-                    iniciado = resumeOf(episode.streamUrl) > 0,
-                    visto = watchedOf(episode.streamUrl),
-                ) { onPlayEpisode(episode) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SectionLabel(text: String) =
-    Text(text, color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.padding(bottom = 8.dp))
-
-@Composable
-private fun SeasonRow(
-    label: String,
-    detalhe: String?,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onSelect: () -> Unit,
-) {
-    var focused by remember { mutableStateOf(false) }
-    Row(
-        modifier.fillMaxWidth().padding(vertical = 3.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (selected) Coral else if (focused) Color(0xFF241019) else Panel)
-            .onFocusChanged { focused = it.isFocused; if (it.isFocused) onSelect() }
-            .clickable { onSelect() }
-            .focusable()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-    ) {
-        Column {
-            Text(label, color = if (selected) Color.White else Mist, fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal, fontSize = 15.sp)
-            if (detalhe != null) {
-                Text(detalhe, color = if (selected) Color.White else Muted, fontSize = 11.sp)
-            }
-        }
-    }
-}
-
-@Composable
-private fun EpisodeRow(episode: Episode, iniciado: Boolean, visto: Boolean, onPlay: () -> Unit) {
-    var focused by remember { mutableStateOf(false) }
-    val corTitulo = if (visto && !focused) Muted else Mist
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 3.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (focused) Color(0xFF241019) else Panel)
-            .onFocusChanged { focused = it.isFocused }
-            .clickable { onPlay() }
-            .focusable()
-            .padding(horizontal = 16.dp, vertical = 13.dp),
-    ) {
-        Text("E${episode.episode}", color = Coral, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(44.dp))
-        Text(episode.title, color = Mist, fontSize = 15.sp, maxLines = 1)
     }
 }
 

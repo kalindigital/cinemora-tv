@@ -101,6 +101,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var moviePlot: String? by mutableStateOf(null)
         private set
+    /** Gênero, duração, elenco e arte do filme aberto, para a tela de detalhe. */
+    var movieDetailExtra: MovieExtra? by mutableStateOf(null)
+        private set
     var featuredPlot: String? by mutableStateOf(null)
         private set
     /** Filme em foco na lista de filmes: alimenta a arte grande do topo. */
@@ -288,6 +291,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 val esperados = Watchlist.chegaram(repo.watchlist(), conteudo.catalog)
                 mainHandler.post { novidades = novos; chegaram = esperados }
             }
+            // A "Seleção do dia" é 16:9 fixo: pedir a arte antes evita o cartão abrir sem ela.
+            loaded.getOrNull()?.selecaoFilmes?.forEach { filaArte.pedir(it.id) }
             val result = loaded.fold(
                 onSuccess = {
                     val visivel = if (repo.familyMode()) FamilyFilter.apply(it.catalog) else it.catalog
@@ -335,11 +340,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun loadMoviePlot(video: Video) {
         openedMovie = video
         moviePlot = null
+        // O que o foco na fileira já buscou serve aqui: abre sem esperar a rede.
+        movieDetailExtra = extraCache[video.id]
+        moviePlot = movieDetailExtra?.plot
         resumeMs = repo.resumePosition(video.streamUrl)
         executor.execute {
             val credentials = repo.savedCredentials()
-            val plot = if (credentials == null) null else runCatching { repo.loadMoviePlot(credentials, video.id) }.getOrNull()
-            mainHandler.post { moviePlot = plot ?: video.synopsis ?: "" }
+            val extra = extraCache[video.id]
+                ?: credentials?.let { c -> runCatching { repo.loadMovieExtra(c, video.id) }.getOrNull() }
+                    ?.also { extraCache[video.id] = it }
+            mainHandler.post {
+                movieDetailExtra = extra
+                moviePlot = extra?.plot ?: video.synopsis ?: ""
+            }
         }
     }
 
@@ -470,7 +483,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }, ESPERA_FOCO)
     }
 
-    fun clearMoviePlot() { moviePlot = null; resumeMs = 0L }
+    fun clearMoviePlot() { moviePlot = null; movieDetailExtra = null; resumeMs = 0L }
 
     /** Tira do "Continuar assistindo" e descarta a posição salva. */
     fun removeWatched(video: Video) {

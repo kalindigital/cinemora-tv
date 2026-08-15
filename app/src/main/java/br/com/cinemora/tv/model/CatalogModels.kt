@@ -1,5 +1,7 @@
 package br.com.cinemora.tv.model
 
+import br.com.cinemora.tv.data.MovieExtra
+
 data class Credentials(val serverUrl: String, val username: String, val password: String)
 
 data class Category(val id: String, val name: String)
@@ -39,11 +41,14 @@ data class Episode(
     val season: Int,
     val episode: Int,
     val streamUrl: String,
+    val plot: String? = null,
+    val duration: String? = null,
+    val thumbUrl: String? = null,
 )
 
 data class Season(val number: Int, val episodes: List<Episode>)
 
-data class SeriesDetail(val series: Series, val seasons: List<Season>)
+data class SeriesDetail(val series: Series, val seasons: List<Season>, val extra: MovieExtra? = null)
 
 /** Catálogo completo do provedor: filmes (VOD), canais (TV ao vivo) e séries. */
 data class Catalog(

@@ -17,6 +17,8 @@ data class MovieExtra(
     val backdrop: String?,
     val genre: String?,
     val duration: String?,
+    val cast: String? = null,
+    val director: String? = null,
 )
 
 /** Converte as respostas JSON do player_api Xtream nos modelos do app. Funções puras. */
@@ -38,6 +40,8 @@ object XtreamParser {
             backdrop = backdrop,
             genre = info.optStringOrNull("genre"),
             duration = formatDuration(info.optString("duration")),
+            cast = info.optStringOrNull("cast"),
+            director = info.optStringOrNull("director"),
         )
     }
 
@@ -114,22 +118,27 @@ object XtreamParser {
     }
 
     fun seriesDetail(json: String, series: Series, credentials: Credentials): SeriesDetail {
-        val episodesObj = JSONObject(json).optJSONObject("episodes") ?: return SeriesDetail(series, emptyList())
+        val extra = seriesExtra(json)
+        val episodesObj = JSONObject(json).optJSONObject("episodes") ?: return SeriesDetail(series, emptyList(), extra)
         val seasons = episodesObj.keys().asSequence().mapNotNull { key ->
             val array = episodesObj.optJSONArray(key) ?: return@mapNotNull null
             val episodes = array.objects().map { ep ->
                 val epId = ep.optString("id")
+                val info = ep.optJSONObject("info")
                 Episode(
                     id = epId,
                     title = cleanEpisodeTitle(ep.optString("title"), ep.optString("episode_num")),
                     season = key.toIntOrNull() ?: 0,
                     episode = ep.optString("episode_num").toIntOrNull() ?: 0,
                     streamUrl = StreamUrlBuilder.seriesEpisode(credentials, epId, ep.optString("container_extension", "mp4")),
+                    plot = info?.optStringOrNull("plot"),
+                    duration = info?.optString("duration")?.let(::formatDuration),
+                    thumbUrl = info?.optStringOrNull("movie_image"),
                 )
             }.sortedBy { it.episode }
             Season(key.toIntOrNull() ?: 0, episodes)
         }.sortedBy { it.number }.toList()
-        return SeriesDetail(series, seasons)
+        return SeriesDetail(series, seasons, extra)
     }
 
     /** Normaliza a nota do provedor (ex.: "6.666") para uma casa decimal ("6.7"). Nota ausente ou 0 vira nulo. */

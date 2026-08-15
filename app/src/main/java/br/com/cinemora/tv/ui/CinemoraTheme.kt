@@ -234,11 +234,11 @@ internal fun PosterCard(
                 // Sem o degradê o nome some sobre cenas claras.
                 Box(
                     Modifier.fillMaxSize()
-                        .background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to Color(0xE60A0D12))),
+                        .background(Brush.verticalGradient(0.62f to Color.Transparent, 1f to Color(0xCC05070A))),
                 )
                 Text(
                     title, color = Color.White, fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.sp, lineHeight = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    fontSize = 12.sp, lineHeight = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.align(Alignment.BottomStart).padding(horizontal = 8.dp, vertical = 6.dp),
                 )
             }

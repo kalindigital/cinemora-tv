@@ -46,6 +46,7 @@ class MainActivity : ComponentActivity() {
                 state = viewModel.state,
                 seriesDetail = viewModel.seriesDetail,
                 moviePlot = viewModel.moviePlot,
+                movieDetailExtra = viewModel.movieDetailExtra,
                 featuredPlot = viewModel.featuredPlot,
                 movieFocus = viewModel.movieFocus,
                 movieFocusExtra = viewModel.movieFocusExtra,

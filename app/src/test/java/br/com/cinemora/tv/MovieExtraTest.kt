@@ -48,4 +48,15 @@ class MovieExtraTest {
     @Test fun `serie sem tempo de episodio fica sem duracao`() {
         assertNull(XtreamParser.seriesExtra("""{"info":{"plot":"x"}}""").duration)
     }
+
+    @Test fun `traz elenco e direcao quando existem`() {
+        val json = """{"info":{"cast":"Tom Holland, Zendaya","director":"Jon Watts"}}"""
+        val extra = XtreamParser.movieExtra(json)
+        assertEquals("Tom Holland, Zendaya", extra.cast)
+        assertEquals("Jon Watts", extra.director)
+    }
+
+    @Test fun `direcao em branco vira nulo`() {
+        assertNull(XtreamParser.movieExtra("""{"info":{"director":"  "}}""").director)
+    }
 }
