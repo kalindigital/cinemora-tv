@@ -171,9 +171,11 @@ private val CardVisual.alturaImagemDp
         CardVisual.LIMPO -> 188
     }
 
-/** Tamanho do cartão em pé quando ele abre em 16:9 sob o foco. */
-private val VERTICAL_FOCADO_LARGURA = 214.dp
-private val VERTICAL_FOCADO_ALTURA = 120.dp
+/**
+ * Ao abrir em 16:9, o cartão em pé mantém a altura da fileira e só cresce para o lado,
+ * empurrando os vizinhos. Encolher a altura deixava um vão embaixo do cartão.
+ */
+private val VERTICAL_FOCADO_LARGURA = (CardVisual.VERTICAL.alturaImagemDp * 16 / 9).dp
 
 /**
  * Cartão de filme ou série, com destaque ao foco.
@@ -202,10 +204,7 @@ internal fun PosterCard(
         if (abreNoFoco) VERTICAL_FOCADO_LARGURA else visual.larguraDp.dp,
         label = "largura",
     )
-    val altura by animateDpAsState(
-        if (abreNoFoco) VERTICAL_FOCADO_ALTURA else visual.alturaImagemDp.dp,
-        label = "altura",
-    )
+    val altura = visual.alturaImagemDp.dp
     // O nome vai sobre a arte sempre que ela é 16:9: a arte larga quase nunca traz o título.
     val nomeSobreArte = visual == CardVisual.LARGO || abreNoFoco
     Column(
