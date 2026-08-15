@@ -130,7 +130,13 @@ private fun LinhaTemporada(
     Row(
         modifier.fillMaxWidth().padding(vertical = 3.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(if (focused) Color(0x33FFFFFF) else if (selecionada) Color(0x1AFFFFFF) else Color.Transparent)
+            .background(
+                when {
+                    focused -> Color(0xF0121821)
+                    selecionada -> Color(0xB30C1118)
+                    else -> Color(0x66080B10)
+                },
+            )
             // Andar pelas temporadas já troca a lista de episódios, sem precisar confirmar.
             .onFocusChanged { focused = it.isFocused; if (it.isFocused) onSelect() }
             .clickable { onSelect() }
@@ -161,7 +167,9 @@ private fun CartaoEpisodio(
     Row(
         Modifier.fillMaxWidth().padding(vertical = 5.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(if (focused) Color(0x26FFFFFF) else Color.Transparent)
+            // A arte da série passa por trás da lista: sem um painel escuro o texto some
+            // sobre as cenas claras. O foco escurece mais ainda, para leitura confortável.
+            .background(if (focused) Color(0xF0121821) else Color(0x99080B10))
             .onFocusChanged { focused = it.isFocused }
             .clickable { onPlay() }
             .focusable()
