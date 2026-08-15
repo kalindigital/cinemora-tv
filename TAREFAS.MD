@@ -81,3 +81,9 @@ Plano: docs/PLANO-catalogo-navegacao-cache.md
 - [x] Rolagem por fileira: a fileira em foco sobe para o topo, sem deixar meia fileira cortada.
 - [x] Cartão 16:9 menor, com o nome escrito sobre a arte.
 - [x] Aba Categorias com pôster solto (sem painel), nome e dados embaixo.
+
+### Listagem no estilo Netflix
+- [x] Cartão em pé que abre em 16:9 ao receber o foco, com a arte larga e o nome sobre ela.
+- [x] Fileira "Seleção do dia" com 10 títulos em arte 16:9 fixa, no topo de Filmes e Séries.
+- [x] Barra de progresso nos cartões de "Continuar assistindo".
+- [x] Aba Séries com arte de fundo em tela cheia e destaque que segue o foco.

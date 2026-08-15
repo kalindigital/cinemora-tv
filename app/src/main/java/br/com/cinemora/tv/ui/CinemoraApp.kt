@@ -88,6 +88,11 @@ fun CinemoraApp(
     movieArt: Map<String, String>,
     onFocusMovie: (Video?) -> Unit,
     onNeedArt: (Video) -> Unit,
+    progresso: Map<String, Float>,
+    seriesFocus: Series?,
+    seriesFocusExtra: MovieExtra?,
+    seriesArt: Map<String, String>,
+    onFocusSeries: (Series?) -> Unit,
     aiState: AiState,
     resumeMs: Long,
     resumeOf: (String) -> Long,
@@ -185,6 +190,11 @@ fun CinemoraApp(
                     movieArt = movieArt,
                     onFocusMovie = onFocusMovie,
                     onNeedArt = onNeedArt,
+                    progresso = progresso,
+                    seriesFocus = seriesFocus,
+                    seriesFocusExtra = seriesFocusExtra,
+                    seriesArt = seriesArt,
+                    onFocusSeries = onFocusSeries,
                     aiState = aiState,
                     resumeMs = resumeMs,
                     resumeOf = resumeOf,
@@ -290,6 +300,11 @@ private fun HomeShell(
     movieArt: Map<String, String>,
     onFocusMovie: (Video?) -> Unit,
     onNeedArt: (Video) -> Unit,
+    progresso: Map<String, Float>,
+    seriesFocus: Series?,
+    seriesFocusExtra: MovieExtra?,
+    seriesArt: Map<String, String>,
+    onFocusSeries: (Series?) -> Unit,
     aiState: AiState,
     resumeMs: Long,
     resumeOf: (String) -> Long,
@@ -446,17 +461,20 @@ private fun HomeShell(
         else -> Box(Modifier.fillMaxSize()) {
             Box(
                 Modifier.fillMaxSize()
-                    .padding(top = if (section == Section.FILMES) 0.dp else TopBarHeight)
+                    // Filmes e Séries desenham a arte atrás da barra de cima.
+                    .padding(top = if (section == Section.FILMES || section == Section.SERIES) 0.dp else TopBarHeight)
                     .focusRequester(contentFocus)
                     .focusGroup(),
             ) {
                 when (section) {
                     Section.FILMES -> MoviesSection(
                         home.catalog, home.userData, home.featured, featuredPlot, sortOrder, novidades,
-                        posicaoFilmes, movieFocus, movieFocusExtra, movieArt, onFocusMovie, onNeedArt,
+                        posicaoFilmes, home.selecaoFilmes, movieFocus, movieFocusExtra, movieArt, progresso,
+                        onFocusMovie, onNeedArt,
                     ) { openMovieId = it.id }
                     Section.SERIES -> SeriesSection(
-                        home.catalog, home.userData, home.featuredSeries, sortOrder, posicaoSeries,
+                        home.catalog, home.userData, home.featuredSeries, home.selecaoSeries, sortOrder,
+                        posicaoSeries, seriesFocus, seriesFocusExtra, seriesArt, onFocusSeries,
                     ) { openSeriesId = it.id }
                     Section.CANAIS -> ChannelsSection(home.catalog) { onPlay(it.name, it.streamUrl, false, it.logoUrl) }
                     Section.CATEGORIAS -> CategoriesSection(

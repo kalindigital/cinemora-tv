@@ -32,4 +32,20 @@ class MovieExtraTest {
     @Test fun `duracao em minutos vira formato curto`() {
         assertEquals("1h30", XtreamParser.movieExtra("""{"info":{"duration":"1:30:00"}}""").duration)
     }
+
+    @Test fun `serie usa o tempo de episodio como duracao`() {
+        val json = """
+            {"info":{"plot":"Uma série.","genre":"Drama","episode_run_time":"44",
+             "backdrop_path":["https://image.tmdb.org/t/p/w1280/s.jpg"]}}
+        """.trimIndent()
+        val extra = XtreamParser.seriesExtra(json)
+        assertEquals("Uma série.", extra.plot)
+        assertEquals("Drama", extra.genre)
+        assertEquals("44min", extra.duration)
+        assertEquals("https://image.tmdb.org/t/p/w1280/s.jpg", extra.backdrop)
+    }
+
+    @Test fun `serie sem tempo de episodio fica sem duracao`() {
+        assertNull(XtreamParser.seriesExtra("""{"info":{"plot":"x"}}""").duration)
+    }
 }

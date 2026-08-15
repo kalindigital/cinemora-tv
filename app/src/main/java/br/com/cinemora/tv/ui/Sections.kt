@@ -87,9 +87,11 @@ internal fun MoviesSection(
     sortOrder: SortOrder,
     novidades: List<Video>,
     listState: LazyListState,
+    selecao: List<Video>,
     focado: Video?,
     focadoExtra: MovieExtra?,
     arte: Map<String, String>,
+    progresso: Map<String, Float>,
     onFocusMovie: (Video?) -> Unit,
     onNeedArt: (Video) -> Unit,
     onOpenMovie: (Video) -> Unit,
@@ -98,15 +100,17 @@ internal fun MoviesSection(
     val byCategory = remember(catalog) { catalog.movies.groupBy { it.categoryId } }
     val continuar = userData.watched.mapNotNull { byId[it] }
     val favoritos = catalog.movies.filter { movieKey(it) in userData.favorites }
-    val rows = remember(catalog, userData, sortOrder, novidades) {
+    val rows = remember(catalog, userData, sortOrder, novidades, selecao) {
         buildList {
+            // A seleção do dia abre a página em arte larga; o resto do catálogo vem em pôster.
+            if (selecao.isNotEmpty()) add(Fileira("Seleção do dia", selecao, CardVisual.LARGO))
             // "Continuar assistindo" fica em ordem de exibição, não na ordenação escolhida.
-            if (continuar.isNotEmpty()) add("Continuar assistindo" to continuar)
-            if (novidades.isNotEmpty()) add("Novidades no catálogo" to novidades)
-            if (favoritos.isNotEmpty()) add("Favoritos" to CatalogSorter.movies(favoritos, sortOrder))
+            if (continuar.isNotEmpty()) add(Fileira("Continuar assistindo", continuar))
+            if (novidades.isNotEmpty()) add(Fileira("Novidades no catálogo", novidades))
+            if (favoritos.isNotEmpty()) add(Fileira("Favoritos", CatalogSorter.movies(favoritos, sortOrder)))
             catalog.movieCategories.forEach { category ->
                 byCategory[category.id]?.takeIf { it.isNotEmpty() }
-                    ?.let { add(CategoryNames.short(category.name) to CatalogSorter.movies(it, sortOrder)) }
+                    ?.let { add(Fileira(CategoryNames.short(category.name), CatalogSorter.movies(it, sortOrder))) }
             }
         }
     }
@@ -157,9 +161,10 @@ internal fun MoviesSection(
                 // Folga no fim para a última fileira também conseguir subir até o topo.
                 contentPadding = PaddingValues(bottom = 220.dp),
             ) {
-                itemsIndexed(rows) { index, (title, videos) ->
+                itemsIndexed(rows) { index, fileira ->
                     PosterRow(
-                        title, videos, onOpenMovie, visual = CardVisual.LARGO, arte = arte,
+                        fileira.titulo, fileira.itens, onOpenMovie,
+                        visual = fileira.visual, arte = arte, progresso = progresso,
                         onFocus = { video ->
                             onFocusMovie(video)
                             fileiraAtiva = index
@@ -171,6 +176,9 @@ internal fun MoviesSection(
         }
     }
 }
+
+/** Uma fileira da página: título, itens e como os cartões aparecem. */
+private data class Fileira(val titulo: String, val itens: List<Video>, val visual: CardVisual = CardVisual.VERTICAL)
 
 /** Linha de dados do destaque: ano · duração · nota. */
 private fun metaDoFilme(video: Video?, extra: MovieExtra?): String? {
@@ -184,45 +192,92 @@ internal fun SeriesSection(
     catalog: Catalog,
     userData: UserData,
     featured: Series?,
+    selecao: List<Series>,
     sortOrder: SortOrder,
     listState: LazyListState,
+    focado: Series?,
+    focadoExtra: MovieExtra?,
+    arte: Map<String, String>,
+    onFocusSeries: (Series?) -> Unit,
     onOpenSeries: (Series) -> Unit,
 ) {
     val byCategory = remember(catalog) { catalog.series.groupBy { it.categoryId } }
     val byId = remember(catalog) { catalog.series.associateBy { seriesKey(it) } }
     val continuar = userData.watched.mapNotNull { byId[it] }
     val favoritos = catalog.series.filter { seriesKey(it) in userData.favorites }
-    val rows = remember(catalog, userData, sortOrder) {
+    val rows = remember(catalog, userData, sortOrder, selecao) {
         buildList {
-            if (continuar.isNotEmpty()) add("Continuar assistindo" to continuar)
-            if (favoritos.isNotEmpty()) add("Favoritos" to CatalogSorter.series(favoritos, sortOrder))
+            if (selecao.isNotEmpty()) add(FileiraSerie("Seleção do dia", selecao, CardVisual.LARGO))
+            if (continuar.isNotEmpty()) add(FileiraSerie("Continuar assistindo", continuar))
+            if (favoritos.isNotEmpty()) add(FileiraSerie("Favoritos", CatalogSorter.series(favoritos, sortOrder)))
             catalog.seriesCategories.forEach { category ->
                 byCategory[category.id]?.takeIf { it.isNotEmpty() }
-                    ?.let { add(CategoryNames.short(category.name) to CatalogSorter.series(it, sortOrder)) }
+                    ?.let { add(FileiraSerie(CategoryNames.short(category.name), CatalogSorter.series(it, sortOrder))) }
             }
         }
     }
-    val firstRow = remember { FocusRequester() }
-    val scope = rememberCoroutineScope()
-    LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 48.dp)) {
-        item {
-            Hero(
-                title = featured?.title,
-                synopsis = featured?.synopsis,
-                imageUrl = ImageUrls.detail(featured?.coverUrl),
-                actionLabel = "Ver episódios",
-                onAction = featured?.let { { onOpenSeries(it) } },
-                modifier = Modifier.fillParentMaxHeight(0.68f)
-                    .onFocusChanged { if (it.hasFocus) scope.launch { listState.animateScrollToItem(0) } },
-                hasRows = rows.isNotEmpty(),
-                downTarget = firstRow,
-            )
+    val alvo = focado ?: featured
+    DisposableEffect(Unit) { onDispose { onFocusSeries(null) } }
+    var fileiraAtiva by remember { mutableStateOf(-1) }
+    LaunchedEffect(fileiraAtiva) {
+        if (fileiraAtiva >= 0) {
+            delay(120)
+            listState.animateScrollToItem(fileiraAtiva)
         }
-        itemsIndexed(rows) { index, (title, series) ->
-            SeriesRow(title, series, onOpenSeries, if (index == 0) Modifier.focusRequester(firstRow) else Modifier)
-        }
-        if (catalog.series.isEmpty()) item { EmptyNotice("Seu provedor não retornou séries.") }
     }
+    Box(Modifier.fillMaxSize()) {
+        AsyncImage(
+            model = ImageUrls.backdrop(focadoExtra?.backdrop) ?: ImageUrls.detail(alvo?.coverUrl),
+            contentDescription = alvo?.title, contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().background(Ink),
+        )
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    0f to Color(0x99050307), 0.28f to Color(0x33050307),
+                    0.50f to Color(0xCC070A0D), 0.66f to Color(0xF2070A0D), 1f to Ink,
+                ),
+            ),
+        )
+        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Ink, Color(0x00070A0D)))))
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxWidth().fillMaxHeight(0.44f)) {
+                InfoDestaque(
+                    eyebrow = if (focado == null) "SELEÇÃO DO DIA" else focadoExtra?.genre?.uppercase() ?: "EM DESTAQUE",
+                    title = alvo?.title,
+                    meta = metaDaSerie(alvo, focadoExtra),
+                    synopsis = if (focado != null) focadoExtra?.plot ?: focado.synopsis else featured?.synopsis,
+                    modifier = Modifier.align(Alignment.BottomStart),
+                )
+            }
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(bottom = 220.dp),
+            ) {
+                itemsIndexed(rows) { index, fileira ->
+                    SeriesRow(
+                        fileira.titulo, fileira.itens, onOpenSeries, visual = fileira.visual, arte = arte,
+                        onFocus = { serie ->
+                            onFocusSeries(serie)
+                            fileiraAtiva = index
+                        },
+                    )
+                }
+                if (catalog.series.isEmpty()) item { EmptyNotice("Seu provedor não retornou séries.") }
+            }
+        }
+    }
+}
+
+/** Uma fileira de séries: título, itens e como os cartões aparecem. */
+private data class FileiraSerie(val titulo: String, val itens: List<Series>, val visual: CardVisual = CardVisual.VERTICAL)
+
+/** Linha de dados da série: ano · duração do episódio · nota. */
+private fun metaDaSerie(series: Series?, extra: MovieExtra?): String? {
+    if (series == null) return null
+    return listOfNotNull(series.year, extra?.duration, series.rating?.let { "★ $it" })
+        .joinToString("   ·   ").ifBlank { null }
 }
 
 @Composable
@@ -349,7 +404,7 @@ private fun InfoDestaque(
             // o convite só cabe quando não há nada selecionado.
             synopsis?.takeIf { it.isNotBlank() }
                 ?: if (title == null) "Escolha um título nas fileiras abaixo para começar." else "",
-            color = Color(0xFFC4CED8), maxLines = 3, fontSize = 13.sp, lineHeight = 19.sp,
+            color = Color(0xFFC4CED8), maxLines = 2, fontSize = 13.sp, lineHeight = 19.sp,
         )
     }
 }
@@ -449,6 +504,7 @@ internal fun PosterRow(
     modifier: Modifier = Modifier,
     visual: CardVisual = CardVisual.PADRAO,
     arte: Map<String, String> = emptyMap(),
+    progresso: Map<String, Float> = emptyMap(),
     onFocus: ((Video) -> Unit)? = null,
     onNeedArt: ((Video) -> Unit)? = null,
 ) {
@@ -463,12 +519,15 @@ internal fun PosterRow(
             itemsIndexed(videos, key = { _, video -> video.id }) { index, video ->
                 // Enquanto a arte 16:9 não chega, a capa segura o lugar do cartão.
                 LaunchedEffect(video.id) { onNeedArt?.invoke(video) }
+                val arteLarga = arte[video.id]?.let { ImageUrls.detail(it) }
                 PosterCard(
                     video.title,
-                    arte[video.id]?.let { ImageUrls.detail(it) } ?: ImageUrls.card(video.coverUrl),
+                    if (visual == CardVisual.LARGO) arteLarga ?: ImageUrls.card(video.coverUrl) else ImageUrls.card(video.coverUrl),
                     subtitle(video.year, video.rating),
                     if (index == 0) Modifier.focusRequester(first) else Modifier,
                     visual = visual,
+                    arteLarga = arteLarga,
+                    progresso = progresso[video.streamUrl],
                     onFocus = onFocus?.let { avisar -> { avisar(video) } },
                 ) { onOpen(video) }
             }
@@ -484,6 +543,8 @@ internal fun SeriesRow(
     onOpen: (Series) -> Unit,
     modifier: Modifier = Modifier,
     visual: CardVisual = CardVisual.PADRAO,
+    arte: Map<String, String> = emptyMap(),
+    onFocus: ((Series) -> Unit)? = null,
 ) {
     val first = remember { FocusRequester() }
     Column {
@@ -494,10 +555,15 @@ internal fun SeriesRow(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             itemsIndexed(series, key = { _, item -> item.id }) { index, item ->
+                val arteLarga = arte[item.id]?.let { ImageUrls.detail(it) }
                 PosterCard(
-                    item.title, ImageUrls.card(item.coverUrl), subtitle(item.year, item.rating),
+                    item.title,
+                    if (visual == CardVisual.LARGO) arteLarga ?: ImageUrls.card(item.coverUrl) else ImageUrls.card(item.coverUrl),
+                    subtitle(item.year, item.rating),
                     if (index == 0) Modifier.focusRequester(first) else Modifier,
                     visual = visual,
+                    arteLarga = arteLarga,
+                    onFocus = onFocus?.let { avisar -> { avisar(item) } },
                 ) { onOpen(item) }
             }
         }

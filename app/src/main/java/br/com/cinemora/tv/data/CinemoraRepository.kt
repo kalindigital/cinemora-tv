@@ -7,7 +7,13 @@ import br.com.cinemora.tv.model.SeriesDetail
 import br.com.cinemora.tv.model.Video
 
 /** Conteúdo da Home: catálogo + os destaques (filme e série) sorteados para este cache. */
-data class HomeContent(val catalog: Catalog, val featured: Video?, val featuredSeries: Series?)
+data class HomeContent(
+    val catalog: Catalog,
+    val featured: Video?,
+    val featuredSeries: Series?,
+    val selecaoFilmes: List<Video>,
+    val selecaoSeries: List<Series>,
+)
 
 /** Orquestra login (cache → rede), cache com validade e dados locais do usuário. */
 class CinemoraRepository(
@@ -38,6 +44,8 @@ class CinemoraRepository(
         catalog = catalog,
         featured = FeaturedPicker.pick(catalog.movies, seed),
         featuredSeries = FeaturedPicker.pick(catalog.series, seed xor 0x5EE5),
+        selecaoFilmes = FeaturedPicker.pickMany(catalog.movies, seed, SELECAO),
+        selecaoSeries = FeaturedPicker.pickMany(catalog.series, seed xor 0x5EE5, SELECAO),
     )
 
     fun loadSeriesDetail(credentials: Credentials, series: Series): SeriesDetail =
@@ -48,6 +56,9 @@ class CinemoraRepository(
 
     fun loadMovieExtra(credentials: Credentials, videoId: String): MovieExtra =
         client.loadMovieExtra(credentials, videoId)
+
+    fun loadSeriesExtra(credentials: Credentials, seriesId: String): MovieExtra =
+        client.loadSeriesExtra(credentials, seriesId)
 
     fun artes(): Map<String, String> = store.artes()
 
@@ -131,5 +142,10 @@ class CinemoraRepository(
     fun logout() {
         store.clearCredentials()
         store.clearCatalog()
+    }
+
+    private companion object {
+        /** Quantos títulos entram na fileira "Seleção do dia". */
+        const val SELECAO = 10
     }
 }

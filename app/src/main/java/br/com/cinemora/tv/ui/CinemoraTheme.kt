@@ -1,5 +1,6 @@
 package br.com.cinemora.tv.ui
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -7,6 +8,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -141,8 +143,11 @@ internal enum class CardVisual {
     /** O mesmo, menor, para fileiras dentro do chat e dos relacionados. */
     COMPACTO,
 
-    /** Arte 16:9 com o nome escrito sobre ela: a fileira da aba Filmes. */
+    /** Arte 16:9 fixa com o nome sobre ela: a fileira de destaques. */
     LARGO,
+
+    /** Pôster em pé que vira arte 16:9 ao receber o foco: as fileiras do catálogo. */
+    VERTICAL,
 
     /** Pôster solto, sem painel atrás, com nome e dados embaixo: a aba Categorias. */
     LIMPO,
@@ -152,7 +157,8 @@ private val CardVisual.larguraDp
     get() = when (this) {
         CardVisual.PADRAO -> 150
         CardVisual.COMPACTO -> 108
-        CardVisual.LARGO -> 196
+        CardVisual.LARGO -> 240
+        CardVisual.VERTICAL -> 124
         CardVisual.LIMPO -> 132
     }
 
@@ -160,15 +166,20 @@ private val CardVisual.alturaImagemDp
     get() = when (this) {
         CardVisual.PADRAO -> 214
         CardVisual.COMPACTO -> 154
-        CardVisual.LARGO -> 110
+        CardVisual.LARGO -> 135
+        CardVisual.VERTICAL -> 186
         CardVisual.LIMPO -> 188
     }
+
+/** Tamanho do cartão em pé quando ele abre em 16:9 sob o foco. */
+private val VERTICAL_FOCADO_LARGURA = 214.dp
+private val VERTICAL_FOCADO_ALTURA = 120.dp
 
 /**
  * Cartão de filme ou série, com destaque ao foco.
  *
- * No modo largo a arte é a 16:9 do filme quando já foi buscada; enquanto não chega, entra a
- * capa em pé recortada. Como a arte quase nunca traz o nome, ele é escrito sobre ela.
+ * No modo vertical o cartão é o pôster e só abre em 16:9 quando recebe o foco — aí entra a
+ * arte larga do filme, com o nome escrito sobre ela.
  */
 @Composable
 internal fun PosterCard(
@@ -177,33 +188,49 @@ internal fun PosterCard(
     subtitle: String?,
     modifier: Modifier = Modifier,
     visual: CardVisual = CardVisual.PADRAO,
+    arteLarga: String? = null,
+    progresso: Float? = null,
     onFocus: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
     val limpo = visual == CardVisual.LIMPO
+    val vertical = visual == CardVisual.VERTICAL
+    val abreNoFoco = vertical && focused
     val forma = RoundedCornerShape(8.dp)
+    val largura by animateDpAsState(
+        if (abreNoFoco) VERTICAL_FOCADO_LARGURA else visual.larguraDp.dp,
+        label = "largura",
+    )
+    val altura by animateDpAsState(
+        if (abreNoFoco) VERTICAL_FOCADO_ALTURA else visual.alturaImagemDp.dp,
+        label = "altura",
+    )
+    // O nome vai sobre a arte sempre que ela é 16:9: a arte larga quase nunca traz o título.
+    val nomeSobreArte = visual == CardVisual.LARGO || abreNoFoco
     Column(
-        modifier.width(visual.larguraDp.dp)
+        modifier.width(largura)
             .onFocusChanged {
                 focused = it.isFocused
                 if (it.isFocused) onFocus?.invoke()
             }
-            .scale(if (focused) 1.06f else 1f)
+            // O cartão em pé já cresce ao abrir em 16:9; ampliar de novo o deixaria fora da fileira.
+            .scale(if (focused && !vertical) 1.06f else 1f)
             // No visual limpo nada envolve o cartão: a moldura fica só na arte.
             .then(if (limpo) Modifier else Modifier.clip(forma).background(Panel).border(if (focused) 3.dp else 1.dp, if (focused) Signal else Edge, forma))
             .clickable { onClick() }
             .focusable(),
     ) {
         Box(
-            Modifier.fillMaxWidth().height(visual.alturaImagemDp.dp)
+            Modifier.fillMaxWidth().height(altura)
                 .then(if (limpo) Modifier.clip(forma).border(if (focused) 3.dp else 0.dp, if (focused) Signal else Color.Transparent, forma) else Modifier),
         ) {
             AsyncImage(
-                model = imageUrl, contentDescription = title, contentScale = ContentScale.Crop,
+                model = if (abreNoFoco) arteLarga ?: imageUrl else imageUrl,
+                contentDescription = title, contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize().background(Color(0xFF26313D)),
             )
-            if (visual == CardVisual.LARGO) {
+            if (nomeSobreArte) {
                 // Sem o degradê o nome some sobre cenas claras.
                 Box(
                     Modifier.fillMaxSize()
@@ -215,8 +242,19 @@ internal fun PosterCard(
                     modifier = Modifier.align(Alignment.BottomStart).padding(horizontal = 8.dp, vertical = 6.dp),
                 )
             }
+            if (progresso != null) {
+                // Quanto falta do título, na base do cartão, como na tela inicial da TV.
+                Box(
+                    Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp)
+                        .background(Color(0x99000000)),
+                ) {
+                    Box(
+                        Modifier.fillMaxWidth(progresso.coerceIn(0f, 1f)).fillMaxHeight().background(Signal),
+                    )
+                }
+            }
         }
-        if (visual == CardVisual.LARGO) return@Column
+        if (nomeSobreArte || vertical) return@Column
         Text(
             title, color = Mist, fontWeight = FontWeight.Normal,
             minLines = 2, maxLines = 2,

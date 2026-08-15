@@ -50,7 +50,14 @@ import kotlin.concurrent.thread
 sealed interface AppState {
     data object Login : AppState
     data object Loading : AppState
-    data class Home(val catalog: Catalog, val featured: Video?, val featuredSeries: Series?, val userData: UserData) : AppState
+    data class Home(
+        val catalog: Catalog,
+        val featured: Video?,
+        val featuredSeries: Series?,
+        val selecaoFilmes: List<Video>,
+        val selecaoSeries: List<Series>,
+        val userData: UserData,
+    ) : AppState
     data class Error(val message: String) : AppState
 }
 
@@ -100,6 +107,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var movieFocus: Video? by mutableStateOf(null)
         private set
     var movieFocusExtra: MovieExtra? by mutableStateOf(null)
+        private set
+    /** Série em foco na lista de séries, com o mesmo papel do destaque de filmes. */
+    var seriesFocus: Series? by mutableStateOf(null)
+        private set
+    var seriesFocusExtra: MovieExtra? by mutableStateOf(null)
+        private set
+    val seriesArt = mutableStateMapOf<String, String>()
+    /** Quanto já foi assistido de cada stream (0..1), para a barra nos cartões. */
+    var progresso: Map<String, Float> by mutableStateOf(emptyMap())
         private set
     /** Arte 16:9 por filme, preenchida aos poucos conforme os cartões aparecem na tela. */
     val movieArt = mutableStateMapOf<String, String>()
@@ -168,6 +184,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val focoExecutor = Executors.newSingleThreadExecutor()
     private val extraCache = ConcurrentHashMap<String, MovieExtra>()
     private var focoSeq = 0
+    private val seriesExtraCache = ConcurrentHashMap<String, MovieExtra>()
+    private var focoSerieSeq = 0
     private val filaArte = FilaArte()
     @Volatile private var buscandoArte = true
     private var artesNaoSalvas = 0
@@ -178,6 +196,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // Republicar reforça o cartão na tela inicial da TV caso a escrita anterior tenha falhado.
         resumeEntry?.let { WatchNext.update(app, it) }
         autoLogin()
+        recarregarProgresso()
         iniciarBuscaDeArte()
         hasOpenAiKey = openAi.isConfigured()
         chatSessions = repo.chatSessions()
@@ -272,7 +291,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val result = loaded.fold(
                 onSuccess = {
                     val visivel = if (repo.familyMode()) FamilyFilter.apply(it.catalog) else it.catalog
-                    AppState.Home(visivel, it.featured, it.featuredSeries, repo.userData())
+                    AppState.Home(visivel, it.featured, it.featuredSeries, it.selecaoFilmes, it.selecaoSeries, repo.userData())
                 },
                 onFailure = { AppState.Error(it.message ?: "Não foi possível carregar o catálogo.") },
             )
@@ -333,7 +352,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * Ao terminar um filme, a Home oferece títulos parecidos. O sinal vem do disco porque a
      * TV costuma destruir esta Activity enquanto o player está em cena.
      */
+    private fun recarregarProgresso() {
+        progresso = repo.resumeEntries()
+            .filter { it.durationMs > 0 }
+            .associate { it.streamUrl to (it.positionMs.toFloat() / it.durationMs).coerceIn(0f, 1f) }
+    }
+
     fun onPlaybackFinished() {
+        recarregarProgresso()
         val home = state as? AppState.Home ?: return
         val terminado = repo.finishedStream() ?: return
         val movie = openedMovie?.takeIf { it.streamUrl == terminado }
@@ -344,6 +370,35 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun clearRecommendations() { recommendations = emptyList() }
+
+    /**
+     * Foco na fileira de séries. O detalhe da série traz todos os episódios junto, então é
+     * uma resposta pesada: buscamos só a série em foco, e uma única vez por série.
+     */
+    fun onSeriesFocused(series: Series?) {
+        focoSerieSeq++
+        val seq = focoSerieSeq
+        seriesFocus = series
+        if (series == null) {
+            seriesFocusExtra = null
+            return
+        }
+        val emCache = seriesExtraCache[series.id]
+        seriesFocusExtra = emCache
+        if (emCache != null) return
+        mainHandler.postDelayed({
+            if (seq != focoSerieSeq) return@postDelayed
+            focoExecutor.execute {
+                val credentials = repo.savedCredentials() ?: return@execute
+                val extra = runCatching { repo.loadSeriesExtra(credentials, series.id) }.getOrNull() ?: return@execute
+                seriesExtraCache[series.id] = extra
+                mainHandler.post {
+                    extra.backdrop?.let { seriesArt[series.id] = it }
+                    if (seq == focoSerieSeq) seriesFocusExtra = extra
+                }
+            }
+        }, ESPERA_FOCO_SERIE)
+    }
 
     /**
      * O cartão pede a própria arte ao aparecer. Quem busca é uma única linha de trabalho,
@@ -739,6 +794,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private companion object {
         const val AMOSTRA = "Olá! É assim que eu vou falar com você no Cinemora."
         const val ESPERA_FOCO = 400L
+        const val ESPERA_FOCO_SERIE = 550L
         const val ESPERA_FILA = 200L
         const val LOTE_ARTE = 12
     }

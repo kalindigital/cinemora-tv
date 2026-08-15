@@ -41,6 +41,15 @@ object XtreamParser {
         )
     }
 
+    /** O detalhe da série tem os mesmos campos do filme, menos a duração: essa é por episódio. */
+    fun seriesExtra(json: String): MovieExtra {
+        val base = movieExtra(json)
+        val minutos = runCatching {
+            JSONObject(json).optJSONObject("info")?.optString("episode_run_time")
+        }.getOrNull()?.trim()?.toIntOrNull()
+        return base.copy(duration = minutos?.let { "${it}min" })
+    }
+
     /** "2:04:00" -> "2h04"; "0:45:00" -> "45min". */
     private fun formatDuration(raw: String): String? {
         val partes = raw.split(":").mapNotNull { it.trim().toIntOrNull() }
