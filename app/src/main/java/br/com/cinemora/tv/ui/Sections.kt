@@ -56,6 +56,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
@@ -87,9 +88,14 @@ internal fun seriesKey(series: Series) = "s:${series.id}"
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun alinharNoComeco(): BringIntoViewSpec = remember {
-    object : BringIntoViewSpec {
-        override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float) = offset
+private fun alinharNoComeco(): BringIntoViewSpec {
+    // A folga é a mesma do contentPadding da fileira: sem ela o cartão encosta na borda.
+    val folga = with(LocalDensity.current) { MARGEM_FILEIRA.toPx() }
+    return remember(folga) {
+        object : BringIntoViewSpec {
+            override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float) =
+                offset - folga
+        }
     }
 }
 
@@ -104,6 +110,9 @@ private fun semRolagemAutomatica(): BringIntoViewSpec = remember {
         override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float) = 0f
     }
 }
+
+/** Respiro nas pontas das fileiras. */
+private val MARGEM_FILEIRA = 32.dp
 
 private fun subtitle(year: String?, rating: String?): String? =
     listOfNotNull(year, rating).joinToString("  ·  ").ifBlank { null }
@@ -148,8 +157,15 @@ internal fun MoviesSection(
     // O destaque mostra o filme em foco; sem foco (ao entrar na aba), a seleção do dia.
     val alvo = focado ?: featured
     val sinopse = if (focado != null) focadoExtra?.plot ?: focado.synopsis else featuredPlot ?: featured?.synopsis
-    // Sai da aba de filmes sem deixar o destaque preso no último item focado.
-    DisposableEffect(Unit) { onDispose { onFocusMovie(null) } }
+    // Ao abrir um detalhe a seção é desmontada; guardamos o cartão de onde saímos para
+    // reabrir a lista nele, em vez de recomeçar do primeiro.
+    val restaurarId = remember { focado?.id }
+    val fileiraAlvo = remember(rows, restaurarId) {
+        restaurarId?.let { id -> rows.indexOfFirst { fila -> fila.itens.any { it.id == id } } } ?: -1
+    }
+    LaunchedEffect(fileiraAlvo) {
+        if (fileiraAlvo >= 0) listState.scrollToItem(fileiraAlvo)
+    }
     // A coluna só se move quando o foco troca de fileira, e aí leva o título junto.
     var fileiraAtiva by remember { mutableStateOf(-1) }
     LaunchedEffect(fileiraAtiva) {
@@ -192,6 +208,7 @@ internal fun MoviesSection(
                     PosterRow(
                         fileira.titulo, fileira.itens, onOpenMovie,
                         visual = fileira.visual, arte = arte, progresso = progresso,
+                        restaurarId = restaurarId,
                         onFocus = { video -> onFocusMovie(video); fileiraAtiva = index },
                         onNeedArt = onNeedArt,
                     )
@@ -243,7 +260,13 @@ internal fun SeriesSection(
         }
     }
     val alvo = focado ?: featured
-    DisposableEffect(Unit) { onDispose { onFocusSeries(null) } }
+    val restaurarId = remember { focado?.id }
+    val fileiraAlvo = remember(rows, restaurarId) {
+        restaurarId?.let { id -> rows.indexOfFirst { fila -> fila.itens.any { it.id == id } } } ?: -1
+    }
+    LaunchedEffect(fileiraAlvo) {
+        if (fileiraAlvo >= 0) listState.scrollToItem(fileiraAlvo)
+    }
     var fileiraAtiva by remember { mutableStateOf(-1) }
     LaunchedEffect(fileiraAtiva) {
         if (fileiraAtiva >= 0) listState.animateScrollToItem(fileiraAtiva)
@@ -282,6 +305,7 @@ internal fun SeriesSection(
                 itemsIndexed(rows) { index, fileira ->
                     SeriesRow(
                         fileira.titulo, fileira.itens, onOpenSeries, visual = fileira.visual, arte = arte,
+                        restaurarId = restaurarId,
                         onFocus = { serie -> onFocusSeries(serie); fileiraAtiva = index },
                     )
                 }
@@ -527,16 +551,30 @@ internal fun PosterRow(
     visual: CardVisual = CardVisual.PADRAO,
     arte: Map<String, String> = emptyMap(),
     progresso: Map<String, Float> = emptyMap(),
+    restaurarId: String? = null,
     onFocus: ((Video) -> Unit)? = null,
     onNeedArt: ((Video) -> Unit)? = null,
 ) {
     val first = remember { FocusRequester() }
+    val alvo = remember { FocusRequester() }
+    val rowState = rememberLazyListState()
+    // Voltando do detalhe, a fileira reabre no mesmo cartão, já com o foco nele.
+    val indiceAlvo = remember(videos, restaurarId) {
+        restaurarId?.let { id -> videos.indexOfFirst { it.id == id } } ?: -1
+    }
+    LaunchedEffect(indiceAlvo) {
+        if (indiceAlvo >= 0) {
+            rowState.scrollToItem(indiceAlvo)
+            runCatching { alvo.requestFocus() }
+        }
+    }
     Column {
         RowTitle(title)
         CompositionLocalProvider(LocalBringIntoViewSpec provides alinharNoComeco()) {
         LazyRow(
+            state = rowState,
             modifier = modifier.focusGroup().focusProperties { onEnter = { first.requestFocus() } },
-            contentPadding = PaddingValues(horizontal = 32.dp),
+            contentPadding = PaddingValues(horizontal = MARGEM_FILEIRA),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             itemsIndexed(videos, key = { _, video -> video.id }) { index, video ->
@@ -547,7 +585,11 @@ internal fun PosterRow(
                     video.title,
                     if (visual == CardVisual.LARGO) arteLarga ?: ImageUrls.card(video.coverUrl) else ImageUrls.card(video.coverUrl),
                     subtitle(video.year, video.rating),
-                    if (index == 0) Modifier.focusRequester(first) else Modifier,
+                    when {
+                        index == indiceAlvo -> Modifier.focusRequester(alvo)
+                        index == 0 -> Modifier.focusRequester(first)
+                        else -> Modifier
+                    },
                     visual = visual,
                     arteLarga = arteLarga,
                     progresso = progresso[video.streamUrl],
@@ -568,15 +610,28 @@ internal fun SeriesRow(
     modifier: Modifier = Modifier,
     visual: CardVisual = CardVisual.PADRAO,
     arte: Map<String, String> = emptyMap(),
+    restaurarId: String? = null,
     onFocus: ((Series) -> Unit)? = null,
 ) {
     val first = remember { FocusRequester() }
+    val alvo = remember { FocusRequester() }
+    val rowState = rememberLazyListState()
+    val indiceAlvo = remember(series, restaurarId) {
+        restaurarId?.let { id -> series.indexOfFirst { it.id == id } } ?: -1
+    }
+    LaunchedEffect(indiceAlvo) {
+        if (indiceAlvo >= 0) {
+            rowState.scrollToItem(indiceAlvo)
+            runCatching { alvo.requestFocus() }
+        }
+    }
     Column {
         RowTitle(title)
         CompositionLocalProvider(LocalBringIntoViewSpec provides alinharNoComeco()) {
         LazyRow(
+            state = rowState,
             modifier = modifier.focusGroup().focusProperties { onEnter = { first.requestFocus() } },
-            contentPadding = PaddingValues(horizontal = 32.dp),
+            contentPadding = PaddingValues(horizontal = MARGEM_FILEIRA),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             itemsIndexed(series, key = { _, item -> item.id }) { index, item ->
@@ -585,7 +640,11 @@ internal fun SeriesRow(
                     item.title,
                     if (visual == CardVisual.LARGO) arteLarga ?: ImageUrls.card(item.coverUrl) else ImageUrls.card(item.coverUrl),
                     subtitle(item.year, item.rating),
-                    if (index == 0) Modifier.focusRequester(first) else Modifier,
+                    when {
+                        index == indiceAlvo -> Modifier.focusRequester(alvo)
+                        index == 0 -> Modifier.focusRequester(first)
+                        else -> Modifier
+                    },
                     visual = visual,
                     arteLarga = arteLarga,
                     onFocus = onFocus?.let { avisar -> { avisar(item) } },
@@ -605,7 +664,7 @@ private fun ChannelRow(title: String, channels: List<Channel>, onPlay: (Channel)
         CompositionLocalProvider(LocalBringIntoViewSpec provides alinharNoComeco()) {
         LazyRow(
             modifier = Modifier.focusGroup().focusProperties { onEnter = { first.requestFocus() } },
-            contentPadding = PaddingValues(horizontal = 32.dp),
+            contentPadding = PaddingValues(horizontal = MARGEM_FILEIRA),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             itemsIndexed(channels, key = { _, channel -> channel.id }) { index, channel ->
