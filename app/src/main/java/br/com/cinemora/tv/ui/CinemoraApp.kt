@@ -470,6 +470,7 @@ private fun HomeShell(
             },
             onOpenRelated = { openSeriesId = it.id },
             arte = seriesArt,
+            onFocusSeries = onFocusSeries,
             onAskRecap = { temporada, episodio -> onAskRecap(series, temporada, episodio) },
         )
         else -> Box(Modifier.fillMaxSize()) {

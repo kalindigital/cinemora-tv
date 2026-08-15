@@ -198,7 +198,8 @@ internal fun PosterCard(
     var focused by remember { mutableStateOf(false) }
     val limpo = visual == CardVisual.LIMPO
     val vertical = visual == CardVisual.VERTICAL
-    val abreNoFoco = vertical && focused
+    // Só abre em 16:9 quando existe arte larga; senão o pôster ficaria cortado nas laterais.
+    val abreNoFoco = vertical && focused && arteLarga != null
     val forma = RoundedCornerShape(8.dp)
     val largura by animateDpAsState(
         if (abreNoFoco) VERTICAL_FOCADO_LARGURA else visual.larguraDp.dp,

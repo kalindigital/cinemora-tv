@@ -186,6 +186,7 @@ internal fun SeriesDetailScreen(
     related: List<Series>,
     onOpenRelated: (Series) -> Unit,
     arte: Map<String, String>,
+    onFocusSeries: (Series) -> Unit,
     onAskRecap: (Int, Int) -> Unit,
 ) {
     LaunchedEffect(series.id) { onLoad() }
@@ -298,7 +299,10 @@ internal fun SeriesDetailScreen(
             }
             if (related.isNotEmpty()) {
                 item {
-                    SeriesRow("Títulos semelhantes", related, onOpenRelated, visual = CardVisual.VERTICAL, arte = arte)
+                    SeriesRow(
+                        "Títulos semelhantes", related, onOpenRelated,
+                        visual = CardVisual.VERTICAL, arte = arte, onFocus = onFocusSeries,
+                    )
                 }
             }
         }
