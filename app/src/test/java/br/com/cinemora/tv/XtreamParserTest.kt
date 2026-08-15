@@ -75,4 +75,15 @@ class XtreamParserTest {
         assertNull(XtreamParser.formatRating("0"))
         assertNull(XtreamParser.formatRating(""))
     }
+
+    @Test fun `listagem de series traz a arte 16 por 9 quando o provedor manda`() {
+        val json = """
+            [{"series_id":"5","name":"Peaky Blinders","category_id":"2","cover":"http://c/p.jpg",
+              "backdrop_path":["https://image.tmdb.org/t/p/w1280/wiE.jpg"]},
+             {"series_id":"6","name":"Sem arte","category_id":"2","backdrop_path":[]}]
+        """.trimIndent()
+        val series = XtreamParser.series(json)
+        assertEquals("https://image.tmdb.org/t/p/w1280/wiE.jpg", series[0].backdropUrl)
+        assertNull(series[1].backdropUrl)
+    }
 }

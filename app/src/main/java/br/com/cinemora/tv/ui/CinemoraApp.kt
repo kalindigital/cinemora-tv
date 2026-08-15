@@ -131,6 +131,8 @@ fun CinemoraApp(
     onSetTypewriter: (Boolean) -> Unit,
     familyMode: Boolean,
     onSetFamilyMode: (Boolean) -> Unit,
+    hideAdult: Boolean,
+    onSetHideAdult: (Boolean) -> Unit,
     novidades: List<Video>,
     watchlist: List<String>,
     chegaram: List<Pair<String, Video>>,
@@ -232,6 +234,8 @@ fun CinemoraApp(
                     onSetTypewriter = onSetTypewriter,
                     familyMode = familyMode,
                     onSetFamilyMode = onSetFamilyMode,
+                    hideAdult = hideAdult,
+                    onSetHideAdult = onSetHideAdult,
                     novidades = novidades,
                     watchlist = watchlist,
                     chegaram = chegaram,
@@ -343,6 +347,8 @@ private fun HomeShell(
     onSetTypewriter: (Boolean) -> Unit,
     familyMode: Boolean,
     onSetFamilyMode: (Boolean) -> Unit,
+    hideAdult: Boolean,
+    onSetHideAdult: (Boolean) -> Unit,
     novidades: List<Video>,
     watchlist: List<String>,
     chegaram: List<Pair<String, Video>>,
@@ -434,6 +440,8 @@ private fun HomeShell(
                     Recommendations.related(home.catalog, movie, home.userData.watched.toSet())
                 },
                 onOpenRelated = { openMovieId = it.id },
+                arte = movieArt,
+                onNeedArt = onNeedArt,
                 onAskVerdict = { onAskVerdict(movie) },
             )
         }
@@ -461,6 +469,7 @@ private fun HomeShell(
                 Recommendations.relatedSeries(home.catalog, series, home.userData.watched.toSet())
             },
             onOpenRelated = { openSeriesId = it.id },
+            arte = seriesArt,
             onAskRecap = { temporada, episodio -> onAskRecap(series, temporada, episodio) },
         )
         else -> Box(Modifier.fillMaxSize()) {
@@ -536,6 +545,8 @@ private fun HomeShell(
                         onSetLiveEnabled,
                         familyMode,
                         onSetFamilyMode,
+                        hideAdult,
+                        onSetHideAdult,
                         watchlist,
                         onAddWatchlist,
                         onRemoveWatchlist,

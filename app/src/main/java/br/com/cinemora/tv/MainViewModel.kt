@@ -13,7 +13,6 @@ import br.com.cinemora.tv.data.CacheTtl
 import br.com.cinemora.tv.data.CatalogMatcher
 import br.com.cinemora.tv.data.CatalogNews
 import br.com.cinemora.tv.data.CatalogSearch
-import br.com.cinemora.tv.data.FamilyFilter
 import br.com.cinemora.tv.data.FilaArte
 import br.com.cinemora.tv.data.MovieExtra
 import br.com.cinemora.tv.data.Watchlist
@@ -146,6 +145,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var liveEnabled: Boolean by mutableStateOf(true)
         private set
     var familyMode: Boolean by mutableStateOf(false)
+    var hideAdult: Boolean by mutableStateOf(false)
         private set
     /** Títulos que entraram no catálogo desde a última atualização. */
     var novidades: List<Video> by mutableStateOf(emptyList())
@@ -209,6 +209,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         typewriter = repo.typewriter()
         liveEnabled = repo.liveEnabled()
         familyMode = repo.familyMode()
+        hideAdult = repo.hideAdult()
         watchlist = repo.watchlist()
         tasteProfile = repo.tasteProfile()
         checkForUpdate(silencioso = true)
@@ -295,8 +296,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             loaded.getOrNull()?.selecaoFilmes?.forEach { filaArte.pedir(it.id) }
             val result = loaded.fold(
                 onSuccess = {
-                    val visivel = if (repo.familyMode()) FamilyFilter.apply(it.catalog) else it.catalog
-                    AppState.Home(visivel, it.featured, it.featuredSeries, it.selecaoFilmes, it.selecaoSeries, repo.userData())
+                    AppState.Home(it.catalog, it.featured, it.featuredSeries, it.selecaoFilmes, it.selecaoSeries, repo.userData())
                 },
                 onFailure = { AppState.Error(it.message ?: "Não foi possível carregar o catálogo.") },
             )
@@ -519,6 +519,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         repo.setVoiceMode(mode)
         voiceMode = mode
         if (mode == VoiceMode.MUDO) speaker.stop()
+    }
+
+    /** Esconder o conteúdo adulto vale para tudo: fileiras, busca, novidades e IA. */
+    fun changeHideAdult(ativo: Boolean) {
+        repo.setHideAdult(ativo)
+        hideAdult = ativo
+        refresh()
     }
 
     fun changeFamilyMode(ativo: Boolean) {

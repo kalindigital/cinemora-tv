@@ -227,7 +227,7 @@ internal fun SeriesSection(
     }
     Box(Modifier.fillMaxSize()) {
         AsyncImage(
-            model = ImageUrls.backdrop(focadoExtra?.backdrop) ?: ImageUrls.detail(alvo?.coverUrl),
+            model = ImageUrls.backdrop(focadoExtra?.backdrop ?: alvo?.backdropUrl) ?: ImageUrls.detail(alvo?.coverUrl),
             contentDescription = alvo?.title, contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize().background(Ink),
         )
@@ -555,7 +555,7 @@ internal fun SeriesRow(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             itemsIndexed(series, key = { _, item -> item.id }) { index, item ->
-                val arteLarga = arte[item.id]?.let { ImageUrls.detail(it) }
+                val arteLarga = (arte[item.id] ?: item.backdropUrl)?.let { ImageUrls.detail(it) }
                 PosterCard(
                     item.title,
                     if (visual == CardVisual.LARGO) arteLarga ?: ImageUrls.card(item.coverUrl) else ImageUrls.card(item.coverUrl),

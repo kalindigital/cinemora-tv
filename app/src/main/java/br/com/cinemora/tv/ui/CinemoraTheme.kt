@@ -217,13 +217,13 @@ internal fun PosterCard(
             // O cartão em pé já cresce ao abrir em 16:9; ampliar de novo o deixaria fora da fileira.
             .scale(if (focused && !vertical) 1.06f else 1f)
             // No visual limpo nada envolve o cartão: a moldura fica só na arte.
-            .then(if (limpo) Modifier else Modifier.clip(forma).background(Panel).border(if (focused) 3.dp else 1.dp, if (focused) Signal else Edge, forma))
+            .then(if (limpo) Modifier else Modifier.clip(forma).background(Panel).border(if (focused) 1.5.dp else 1.dp, if (focused) Signal else Edge, forma))
             .clickable { onClick() }
             .focusable(),
     ) {
         Box(
             Modifier.fillMaxWidth().height(altura)
-                .then(if (limpo) Modifier.clip(forma).border(if (focused) 3.dp else 0.dp, if (focused) Signal else Color.Transparent, forma) else Modifier),
+                .then(if (limpo) Modifier.clip(forma).border(if (focused) 1.5.dp else 0.dp, if (focused) Signal else Color.Transparent, forma) else Modifier),
         ) {
             AsyncImage(
                 model = if (abreNoFoco) arteLarga ?: imageUrl else imageUrl,
@@ -285,7 +285,7 @@ internal fun ChannelCard(name: String, logoUrl: String?, modifier: Modifier = Mo
             .scale(if (focused) 1.06f else 1f)
             .clip(RoundedCornerShape(8.dp))
             .background(Panel)
-            .border(if (focused) 3.dp else 1.dp, if (focused) Signal else Edge, RoundedCornerShape(8.dp))
+            .border(if (focused) 1.5.dp else 1.dp, if (focused) Signal else Edge, RoundedCornerShape(8.dp))
             .clickable { onClick() }
             .focusable(),
     ) {

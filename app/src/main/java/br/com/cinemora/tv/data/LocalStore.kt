@@ -85,6 +85,12 @@ class LocalStore(context: Context) {
 
     fun familyMode(): Boolean = prefs.getBoolean(KEY_FAMILY, false)
 
+    fun hideAdult(): Boolean = prefs.getBoolean(KEY_SEM_ADULTO, false)
+
+    fun setHideAdult(ativo: Boolean) {
+        prefs.edit().putBoolean(KEY_SEM_ADULTO, ativo).apply()
+    }
+
     fun setFamilyMode(ativo: Boolean) {
         prefs.edit().putBoolean(KEY_FAMILY, ativo).apply()
     }
@@ -226,6 +232,7 @@ class LocalStore(context: Context) {
         const val KEY_LIVE = "live_enabled"
         const val KEY_KNOWN = "known_ids"
         const val KEY_FAMILY = "family_mode"
+        const val KEY_SEM_ADULTO = "sem_adulto"
         const val KEY_WATCHLIST = "watchlist"
         const val KEY_TASTE = "taste_profile"
     }

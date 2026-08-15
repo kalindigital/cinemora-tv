@@ -59,4 +59,14 @@ class MovieExtraTest {
     @Test fun `direcao em branco vira nulo`() {
         assertNull(XtreamParser.movieExtra("""{"info":{"director":"  "}}""").director)
     }
+
+    @Test fun `backdrop que veio como texto de lista tambem vale`() {
+        // Nas séries deste provedor o campo chega como o texto ["https://..."], com colchetes.
+        val json = """{"info":{"backdrop_path":"[\"https://image.tmdb.org/t/p/w1280/a.jpg\"]"}}"""
+        assertEquals("https://image.tmdb.org/t/p/w1280/a.jpg", XtreamParser.movieExtra(json).backdrop)
+    }
+
+    @Test fun `texto de lista vazia nao vira endereco`() {
+        assertNull(XtreamParser.movieExtra("""{"info":{"backdrop_path":"[]"}}""").backdrop)
+    }
 }

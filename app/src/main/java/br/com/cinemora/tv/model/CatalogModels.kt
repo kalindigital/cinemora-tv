@@ -33,6 +33,7 @@ data class Series(
     val year: String? = null,
     val rating: String? = null,
     val synopsis: String? = null,
+    val backdropUrl: String? = null,
 )
 
 data class Episode(

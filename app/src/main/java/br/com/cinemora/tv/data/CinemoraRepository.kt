@@ -39,14 +39,23 @@ class CinemoraRepository(
         return homeContent(fresh, now)
     }
 
-    /** Semente diferente para a série não cair sempre no mesmo índice do filme. */
-    private fun homeContent(catalog: Catalog, seed: Long) = HomeContent(
-        catalog = catalog,
-        featured = FeaturedPicker.pick(catalog.movies, seed),
-        featuredSeries = FeaturedPicker.pick(catalog.series, seed xor 0x5EE5),
-        selecaoFilmes = FeaturedPicker.pickMany(catalog.movies, seed, SELECAO),
-        selecaoSeries = FeaturedPicker.pickMany(catalog.series, seed xor 0x5EE5, SELECAO),
-    )
+    /**
+     * Semente diferente para a série não cair sempre no mesmo índice do filme.
+     *
+     * Os filtros valem aqui, antes do sorteio: assim destaque, seleção do dia e novidades
+     * saem do mesmo catálogo que a pessoa vê, sem escapar nada por outro caminho.
+     */
+    private fun homeContent(bruto: Catalog, seed: Long): HomeContent {
+        val semAdulto = if (store.hideAdult()) ConteudoAdulto.filtrar(bruto) else bruto
+        val catalog = if (store.familyMode()) FamilyFilter.apply(semAdulto) else semAdulto
+        return HomeContent(
+            catalog = catalog,
+            featured = FeaturedPicker.pick(catalog.movies, seed),
+            featuredSeries = FeaturedPicker.pick(catalog.series, seed xor 0x5EE5),
+            selecaoFilmes = FeaturedPicker.pickMany(catalog.movies, seed, SELECAO),
+            selecaoSeries = FeaturedPicker.pickMany(catalog.series, seed xor 0x5EE5, SELECAO),
+        )
+    }
 
     fun loadSeriesDetail(credentials: Credentials, series: Series): SeriesDetail =
         client.loadSeriesDetail(credentials, series)
@@ -93,6 +102,10 @@ class CinemoraRepository(
     fun saveKnownIds(ids: Set<String>) = store.saveKnownIds(ids)
 
     fun familyMode(): Boolean = store.familyMode()
+
+    fun hideAdult(): Boolean = store.hideAdult()
+
+    fun setHideAdult(ativo: Boolean) = store.setHideAdult(ativo)
 
     fun setFamilyMode(ativo: Boolean) = store.setFamilyMode(ativo)
 

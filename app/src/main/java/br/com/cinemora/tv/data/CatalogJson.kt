@@ -62,7 +62,8 @@ object CatalogJson {
                 JSONObject()
                     .put("id", it.id).put("title", it.title).put("categoryId", it.categoryId)
                     .put("coverUrl", it.coverUrl).put("year", it.year)
-                    .put("rating", it.rating).put("synopsis", it.synopsis),
+                    .put("rating", it.rating).put("synopsis", it.synopsis)
+                    .put("backdropUrl", it.backdropUrl),
             )
         }
     }
@@ -84,6 +85,7 @@ object CatalogJson {
         id = o.optString("id"), title = o.optString("title"), categoryId = o.optString("categoryId"),
         coverUrl = o.optStringOrNull("coverUrl"), year = o.optStringOrNull("year"),
         rating = o.optStringOrNull("rating"), synopsis = o.optStringOrNull("synopsis"),
+        backdropUrl = o.optStringOrNull("backdropUrl"),
     )
 
     private fun <T> JSONArray?.map(transform: (JSONObject) -> T): List<T> {

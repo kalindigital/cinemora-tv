@@ -67,6 +67,12 @@ import br.com.cinemora.tv.model.Video
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 
+/** Subir até o botão principal recoloca a página no topo, sem atrapalhar as demais opções. */
+private fun Modifier.aoFocarVoltarAoTopo(
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    scope: kotlinx.coroutines.CoroutineScope,
+) = onFocusChanged { if (it.isFocused) scope.launch { listState.animateScrollToItem(0) } }
+
 @Composable
 internal fun MovieDetail(
     video: Video,
@@ -82,6 +88,8 @@ internal fun MovieDetail(
     onClose: () -> Unit,
     related: List<Video>,
     onOpenRelated: (Video) -> Unit,
+    arte: Map<String, String>,
+    onNeedArt: (Video) -> Unit,
     onAskVerdict: () -> Unit,
 ) {
     BackHandler(onBack = onClose)
@@ -97,13 +105,7 @@ internal fun MovieDetail(
             contentPadding = PaddingValues(bottom = 32.dp),
         ) {
             item {
-                Column(
-                    Modifier.fillMaxWidth(0.55f)
-                        // Voltando dos relacionados, o Compose traz só o botão focado para a tela:
-                        // aqui a página volta ao topo.
-                        .onFocusChanged { if (it.hasFocus) scope.launch { listState.animateScrollToItem(0) } }
-                        .padding(start = 44.dp, top = 44.dp, end = 20.dp),
-                ) {
+                Column(Modifier.fillMaxWidth(0.55f).padding(start = 44.dp, top = 44.dp, end = 20.dp)) {
                     Text(
                         video.title, color = Mist, fontSize = 34.sp, lineHeight = 38.sp,
                         fontWeight = FontWeight.ExtraBold, maxLines = 3,
@@ -136,7 +138,7 @@ internal fun MovieDetail(
                     BotaoPrincipal(
                         if (emAndamento) "Continuar de ${formatPosition(resumeMs)}" else "Assistir",
                         Icons.Rounded.PlayArrow,
-                        Modifier.focusRequester(playFocus),
+                        Modifier.focusRequester(playFocus).aoFocarVoltarAoTopo(listState, scope),
                     ) { onRecordWatched(video.id); onPlay(video.title, video.streamUrl, false, video.coverUrl) }
                     Spacer(Modifier.height(6.dp))
                     if (emAndamento) {
@@ -158,7 +160,12 @@ internal fun MovieDetail(
                 }
             }
             if (related.isNotEmpty()) {
-                item { PosterRow("Títulos semelhantes", related, onOpenRelated, visual = CardVisual.COMPACTO) }
+                item {
+                    PosterRow(
+                        "Títulos semelhantes", related, onOpenRelated,
+                        visual = CardVisual.VERTICAL, arte = arte, onNeedArt = onNeedArt,
+                    )
+                }
             }
         }
     }
@@ -178,6 +185,7 @@ internal fun SeriesDetailScreen(
     onClose: () -> Unit,
     related: List<Series>,
     onOpenRelated: (Series) -> Unit,
+    arte: Map<String, String>,
     onAskRecap: (Int, Int) -> Unit,
 ) {
     LaunchedEffect(series.id) { onLoad() }
@@ -231,11 +239,7 @@ internal fun SeriesDetailScreen(
             contentPadding = PaddingValues(bottom = 32.dp),
         ) {
             item {
-                Column(
-                    Modifier.fillMaxWidth(0.55f)
-                        .onFocusChanged { if (it.hasFocus) scope.launch { listState.animateScrollToItem(0) } }
-                        .padding(start = 44.dp, top = 44.dp, end = 20.dp),
-                ) {
+                Column(Modifier.fillMaxWidth(0.55f).padding(start = 44.dp, top = 44.dp, end = 20.dp)) {
                     Text(
                         series.title, color = Mist, fontSize = 34.sp, lineHeight = 38.sp,
                         fontWeight = FontWeight.ExtraBold, maxLines = 3,
@@ -268,7 +272,10 @@ internal fun SeriesDetailScreen(
                         } else {
                             "Assistir T${continuarEm.season}:E${continuarEm.episode}"
                         }
-                        BotaoPrincipal(rotulo, Icons.Rounded.PlayArrow, Modifier.focusRequester(playFocus)) {
+                        BotaoPrincipal(
+                            rotulo, Icons.Rounded.PlayArrow,
+                            Modifier.focusRequester(playFocus).aoFocarVoltarAoTopo(listState, scope),
+                        ) {
                             onPlayEpisode(continuarEm, false, EpisodeQueue.upcoming(seasons, continuarEm.id))
                         }
                         Spacer(Modifier.height(6.dp))
@@ -290,7 +297,9 @@ internal fun SeriesDetailScreen(
                 }
             }
             if (related.isNotEmpty()) {
-                item { SeriesRow("Títulos semelhantes", related, onOpenRelated, visual = CardVisual.COMPACTO) }
+                item {
+                    SeriesRow("Títulos semelhantes", related, onOpenRelated, visual = CardVisual.VERTICAL, arte = arte)
+                }
             }
         }
     }

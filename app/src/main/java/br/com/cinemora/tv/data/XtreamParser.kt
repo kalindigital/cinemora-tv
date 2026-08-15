@@ -30,11 +30,7 @@ object XtreamParser {
     fun movieExtra(json: String): MovieExtra {
         val info = runCatching { JSONObject(json).optJSONObject("info") }.getOrNull()
             ?: return MovieExtra(null, null, null, null)
-        val backdrop = when (val bruto = info.opt("backdrop_path")) {
-            is JSONArray -> (0 until bruto.length()).map { bruto.optString(it) }.firstOrNull { it.isNotBlank() }
-            is String -> bruto.takeIf { it.isNotBlank() }
-            else -> null
-        }
+        val backdrop = primeiroEndereco(info.opt("backdrop_path"))
         return MovieExtra(
             plot = info.optStringOrNull("plot") ?: info.optStringOrNull("description"),
             backdrop = backdrop,
@@ -52,6 +48,23 @@ object XtreamParser {
             JSONObject(json).optJSONObject("info")?.optString("episode_run_time")
         }.getOrNull()?.trim()?.toIntOrNull()
         return base.copy(duration = minutos?.let { "${it}min" })
+    }
+
+    /**
+     * O backdrop pode vir como lista, como endereço solto ou — nas séries deste provedor —
+     * como o texto de uma lista, com colchetes e tudo. Os três casos dão no mesmo endereço.
+     */
+    private fun primeiroEndereco(bruto: Any?): String? = when (bruto) {
+        is JSONArray -> (0 until bruto.length()).map { bruto.optString(it) }.firstOrNull { it.isNotBlank() }
+        is String -> {
+            val texto = bruto.trim()
+            if (texto.startsWith("[")) {
+                runCatching { primeiroEndereco(JSONArray(texto)) }.getOrNull()
+            } else {
+                texto.takeIf { it.isNotBlank() }
+            }
+        }
+        else -> null
     }
 
     /** "2:04:00" -> "2h04"; "0:45:00" -> "45min". */
@@ -114,6 +127,8 @@ object XtreamParser {
             year = item.optStringOrNull("year") ?: item.optString("releaseDate").take(4).takeIf { it.length == 4 && it.all(Char::isDigit) },
             rating = formatRating(item.optString("rating")),
             synopsis = item.optStringOrNull("plot"),
+            // Alguns provedores já mandam a arte 16:9 na listagem: aí ela sai de graça.
+            backdropUrl = primeiroEndereco(item.opt("backdrop_path")),
         )
     }
 

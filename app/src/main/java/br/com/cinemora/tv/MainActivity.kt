@@ -97,6 +97,8 @@ class MainActivity : ComponentActivity() {
                 onSetLiveEnabled = viewModel::changeLiveEnabled,
                 familyMode = viewModel.familyMode,
                 onSetFamilyMode = viewModel::changeFamilyMode,
+                hideAdult = viewModel.hideAdult,
+                onSetHideAdult = viewModel::changeHideAdult,
                 novidades = viewModel.novidades,
                 watchlist = viewModel.watchlist,
                 chegaram = viewModel.chegaram,

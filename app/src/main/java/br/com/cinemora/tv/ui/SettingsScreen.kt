@@ -69,6 +69,8 @@ internal fun SettingsSection(
     onSetLiveEnabled: (Boolean) -> Unit,
     familyMode: Boolean,
     onSetFamilyMode: (Boolean) -> Unit,
+    hideAdult: Boolean,
+    onSetHideAdult: (Boolean) -> Unit,
     watchlist: List<String>,
     onAddWatchlist: (String) -> Unit,
     onRemoveWatchlist: (String) -> Unit,
@@ -147,6 +149,19 @@ internal fun SettingsSection(
         )
         Spacer(Modifier.height(8.dp))
         ActionButton(if (tasteProfile == null) "Montar meu perfil" else "Atualizar perfil", onClick = onRefreshTaste)
+
+        Spacer(Modifier.height(18.dp))
+        Text("CONTEÚDO ADULTO", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Esconde as categorias adultas e os títulos marcados com [XXX] em todo o app: fileiras, busca, novidades e respostas da IA.",
+            color = Muted, fontSize = 12.sp,
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Chip("Escondido", hideAdult) { onSetHideAdult(true) }
+            Chip("Visível", !hideAdult) { onSetHideAdult(false) }
+        }
 
         Spacer(Modifier.height(18.dp))
         Text("MODO FAMÍLIA", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)

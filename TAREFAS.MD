@@ -90,3 +90,10 @@ Plano: docs/PLANO-catalogo-navegacao-cache.md
 - [x] Detalhe de filme e série com a arte ocupando a tela, botão principal em pílula e opções em lista.
 - [x] Tela própria de episódios: temporadas de um lado, episódios com miniatura, sinopse e duração do outro.
 - [x] Arte da Seleção do dia buscada assim que o catálogo carrega, para o cartão não abrir com a capa.
+
+### Ajustes de catálogo e navegação
+- [x] Correção: arte 16:9 das séries não carregava (o provedor manda o endereço dentro de um texto com colchetes).
+- [x] Séries usam a arte 16:9 da própria listagem quando o provedor a envia.
+- [x] Opção "Conteúdo adulto: escondido" nas Definições, valendo para fileiras, busca, novidades e IA.
+- [x] Borda de foco pela metade e "Títulos semelhantes" com o mesmo cartão das listas.
+- [x] Correção: rolagem da tela de detalhe pulava ao andar entre as opções.
