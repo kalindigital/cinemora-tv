@@ -114,6 +114,9 @@ private fun semRolagemAutomatica(): BringIntoViewSpec = remember {
 /** Respiro nas pontas das fileiras. */
 private val MARGEM_FILEIRA = 32.dp
 
+/** O cartão restaurado pode demorar alguns quadros para entrar em cena. */
+private const val TENTATIVAS_FOCO = 12
+
 private fun subtitle(year: String?, rating: String?): String? =
     listOfNotNull(year, rating).joinToString("  ·  ").ifBlank { null }
 
@@ -563,9 +566,13 @@ internal fun PosterRow(
         restaurarId?.let { id -> videos.indexOfFirst { it.id == id } } ?: -1
     }
     LaunchedEffect(indiceAlvo) {
-        if (indiceAlvo >= 0) {
-            rowState.scrollToItem(indiceAlvo)
-            runCatching { alvo.requestFocus() }
+        if (indiceAlvo < 0) return@LaunchedEffect
+        rowState.scrollToItem(indiceAlvo)
+        // O cartão só aceita o foco depois de entrar em cena; sem insistir, o foco acaba
+        // na barra de cima e o Voltar parecia trocar de aba.
+        repeat(TENTATIVAS_FOCO) {
+            if (runCatching { alvo.requestFocus() }.isSuccess) return@LaunchedEffect
+            delay(60)
         }
     }
     Column {
@@ -620,9 +627,13 @@ internal fun SeriesRow(
         restaurarId?.let { id -> series.indexOfFirst { it.id == id } } ?: -1
     }
     LaunchedEffect(indiceAlvo) {
-        if (indiceAlvo >= 0) {
-            rowState.scrollToItem(indiceAlvo)
-            runCatching { alvo.requestFocus() }
+        if (indiceAlvo < 0) return@LaunchedEffect
+        rowState.scrollToItem(indiceAlvo)
+        // O cartão só aceita o foco depois de entrar em cena; sem insistir, o foco acaba
+        // na barra de cima e o Voltar parecia trocar de aba.
+        repeat(TENTATIVAS_FOCO) {
+            if (runCatching { alvo.requestFocus() }.isSuccess) return@LaunchedEffect
+            delay(60)
         }
     }
     Column {
