@@ -139,12 +139,16 @@ internal fun PosterCard(
     subtitle: String?,
     modifier: Modifier = Modifier,
     compacto: Boolean = false,
+    onFocus: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
     Column(
         modifier.width(if (compacto) 108.dp else 150.dp)
-            .onFocusChanged { focused = it.isFocused }
+            .onFocusChanged {
+                focused = it.isFocused
+                if (it.isFocused) onFocus?.invoke()
+            }
             .scale(if (focused) 1.06f else 1f)
             .clip(RoundedCornerShape(8.dp))
             .background(Panel)

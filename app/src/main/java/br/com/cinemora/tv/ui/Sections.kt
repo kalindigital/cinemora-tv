@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -28,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,11 +53,13 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.cinemora.tv.data.CatalogSorter
 import br.com.cinemora.tv.data.CategoryNames
+import br.com.cinemora.tv.data.MovieExtra
 import br.com.cinemora.tv.data.ImageUrls
 import br.com.cinemora.tv.data.SortOrder
 import br.com.cinemora.tv.data.UserData
@@ -82,6 +86,9 @@ internal fun MoviesSection(
     sortOrder: SortOrder,
     novidades: List<Video>,
     listState: LazyListState,
+    focado: Video?,
+    focadoExtra: MovieExtra?,
+    onFocusMovie: (Video?) -> Unit,
     onOpenMovie: (Video) -> Unit,
 ) {
     val byId = remember(catalog) { catalog.movies.associateBy { it.id } }
@@ -104,26 +111,44 @@ internal fun MoviesSection(
     // D-pad fica preso no banner, porque a busca de foco não atravessa o hero alto.
     val firstRow = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
-    LazyColumn(state = listState, contentPadding = PaddingValues(bottom = 48.dp)) {
-        item {
-            Hero(
-                title = featured?.title,
-                synopsis = featuredPlot ?: featured?.synopsis,
-                imageUrl = ImageUrls.detail(featured?.coverUrl),
-                actionLabel = "Assistir",
-                onAction = featured?.let { { onOpenMovie(it) } },
-                modifier = Modifier.fillParentMaxHeight(0.68f)
-                    // Subindo das fileiras, o Compose revelava só o botão e o banner ficava
-                    // cortado: aqui a página volta ao topo.
-                    .onFocusChanged { if (it.hasFocus) scope.launch { listState.animateScrollToItem(0) } },
-                hasRows = rows.isNotEmpty(),
-                downTarget = firstRow,
-            )
-        }
-        itemsIndexed(rows) { index, (title, videos) ->
-            PosterRow(title, videos, onOpenMovie, if (index == 0) Modifier.focusRequester(firstRow) else Modifier)
+    // O destaque mostra o filme em foco; sem foco (ao entrar na aba), a seleção do dia.
+    val alvo = focado ?: featured
+    val sinopse = if (focado != null) focadoExtra?.plot ?: focado.synopsis else featuredPlot ?: featured?.synopsis
+    // Sai da aba de filmes sem deixar o destaque preso no último item focado.
+    DisposableEffect(Unit) { onDispose { onFocusMovie(null) } }
+    Column(Modifier.fillMaxSize()) {
+        Hero(
+            title = alvo?.title,
+            synopsis = sinopse,
+            // A arte 16:9 chega depois do get_vod_info; até lá a capa evita o buraco preto.
+            imageUrl = ImageUrls.backdrop(focadoExtra?.backdrop) ?: ImageUrls.detail(alvo?.coverUrl),
+            actionLabel = "Assistir",
+            onAction = alvo?.let { { onOpenMovie(it) } },
+            modifier = Modifier.fillMaxHeight(0.46f)
+                // Subindo das fileiras, o Compose revelava só o botão: aqui a lista volta ao topo.
+                .onFocusChanged { if (it.hasFocus) scope.launch { listState.animateScrollToItem(0) } },
+            hasRows = rows.isNotEmpty(),
+            downTarget = firstRow,
+            eyebrow = if (focado == null) "SELEÇÃO DO DIA" else focadoExtra?.genre?.uppercase() ?: "EM DESTAQUE",
+            meta = metaDoFilme(alvo, focadoExtra),
+        )
+        LazyColumn(state = listState, modifier = Modifier.weight(1f), contentPadding = PaddingValues(bottom = 48.dp)) {
+            itemsIndexed(rows) { index, (title, videos) ->
+                PosterRow(
+                    title, videos, onOpenMovie,
+                    if (index == 0) Modifier.focusRequester(firstRow) else Modifier,
+                    onFocus = onFocusMovie,
+                )
+            }
         }
     }
+}
+
+/** Linha de dados do destaque: ano · duração · nota. */
+private fun metaDoFilme(video: Video?, extra: MovieExtra?): String? {
+    if (video == null) return null
+    return listOfNotNull(video.year, extra?.duration, video.rating?.let { "★ $it" })
+        .joinToString("   ·   ").ifBlank { null }
 }
 
 @Composable
@@ -277,6 +302,8 @@ private fun Hero(
     modifier: Modifier = Modifier,
     hasRows: Boolean = false,
     downTarget: FocusRequester? = null,
+    eyebrow: String = "SELEÇÃO DO DIA",
+    meta: String? = null,
 ) {
     Box(
         modifier
@@ -305,15 +332,25 @@ private fun Hero(
                 .padding(start = 32.dp, end = 24.dp, bottom = 28.dp)
                 .widthIn(max = 560.dp),
         ) {
-            Text("SELEÇÃO DO DIA", color = Signal, fontSize = 13.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
             Text(
-                title ?: "Seu catálogo está pronto", color = Mist, fontSize = 34.sp, lineHeight = 38.sp,
-                fontWeight = FontWeight.ExtraBold, maxLines = 2,
+                eyebrow, color = Signal, fontSize = 13.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                title ?: "Seu catálogo está pronto", color = Mist, fontSize = 30.sp, lineHeight = 34.sp,
+                fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            )
+            if (meta != null) {
+                Spacer(Modifier.height(6.dp))
+                Text(meta, color = Color(0xFF9AA7B4), fontSize = 13.sp, maxLines = 1)
+            }
             Spacer(Modifier.height(8.dp))
             Text(
-                synopsis?.takeIf { it.isNotBlank() } ?: "Escolha um título nas fileiras abaixo para começar.",
+                // Com um título em foco e a sinopse ainda a caminho, a linha fica vazia:
+                // o convite só cabe quando não há nada selecionado.
+                synopsis?.takeIf { it.isNotBlank() }
+                    ?: if (title == null) "Escolha um título nas fileiras abaixo para começar." else "",
                 color = Color(0xFFC4CED8), maxLines = 2, fontSize = 15.sp, lineHeight = 21.sp,
             )
             if (onAction != null) {
@@ -345,6 +382,7 @@ internal fun PosterRow(
     onOpen: (Video) -> Unit,
     modifier: Modifier = Modifier,
     compacto: Boolean = false,
+    onFocus: ((Video) -> Unit)? = null,
 ) {
     val first = remember { FocusRequester() }
     Column {
@@ -359,6 +397,7 @@ internal fun PosterRow(
                     video.title, ImageUrls.card(video.coverUrl), subtitle(video.year, video.rating),
                     if (index == 0) Modifier.focusRequester(first) else Modifier,
                     compacto = compacto,
+                    onFocus = onFocus?.let { avisar -> { avisar(video) } },
                 ) { onOpen(video) }
             }
         }

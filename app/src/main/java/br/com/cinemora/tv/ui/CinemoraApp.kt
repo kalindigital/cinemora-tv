@@ -68,6 +68,7 @@ import br.com.cinemora.tv.data.VoiceMode
 import br.com.cinemora.tv.data.VoiceSpeed
 import br.com.cinemora.tv.data.Recommendations
 import br.com.cinemora.tv.data.ResumeEntry
+import br.com.cinemora.tv.data.MovieExtra
 import br.com.cinemora.tv.data.SortOrder
 import br.com.cinemora.tv.model.Credentials
 import br.com.cinemora.tv.model.Episode
@@ -82,6 +83,9 @@ fun CinemoraApp(
     seriesDetail: DetailState,
     moviePlot: String?,
     featuredPlot: String?,
+    movieFocus: Video?,
+    movieFocusExtra: MovieExtra?,
+    onFocusMovie: (Video?) -> Unit,
     aiState: AiState,
     resumeMs: Long,
     resumeOf: (String) -> Long,
@@ -174,6 +178,9 @@ fun CinemoraApp(
                     seriesDetail = seriesDetail,
                     moviePlot = moviePlot,
                     featuredPlot = featuredPlot,
+                    movieFocus = movieFocus,
+                    movieFocusExtra = movieFocusExtra,
+                    onFocusMovie = onFocusMovie,
                     aiState = aiState,
                     resumeMs = resumeMs,
                     resumeOf = resumeOf,
@@ -274,6 +281,9 @@ private fun HomeShell(
     seriesDetail: DetailState,
     moviePlot: String?,
     featuredPlot: String?,
+    movieFocus: Video?,
+    movieFocusExtra: MovieExtra?,
+    onFocusMovie: (Video?) -> Unit,
     aiState: AiState,
     resumeMs: Long,
     resumeOf: (String) -> Long,
@@ -437,7 +447,7 @@ private fun HomeShell(
                 when (section) {
                     Section.FILMES -> MoviesSection(
                         home.catalog, home.userData, home.featured, featuredPlot, sortOrder, novidades,
-                        posicaoFilmes,
+                        posicaoFilmes, movieFocus, movieFocusExtra, onFocusMovie,
                     ) { openMovieId = it.id }
                     Section.SERIES -> SeriesSection(
                         home.catalog, home.userData, home.featuredSeries, sortOrder, posicaoSeries,

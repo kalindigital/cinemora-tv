@@ -46,6 +46,9 @@ class CinemoraRepository(
     fun loadMoviePlot(credentials: Credentials, videoId: String): String? =
         client.loadMoviePlot(credentials, videoId)
 
+    fun loadMovieExtra(credentials: Credentials, videoId: String): MovieExtra =
+        client.loadMovieExtra(credentials, videoId)
+
     fun userData(): UserData = store.userData()
 
     fun toggleFavorite(id: String): UserData = store.userData().toggleFavorite(id).also { store.saveUserData(it) }

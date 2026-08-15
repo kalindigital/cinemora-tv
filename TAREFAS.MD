@@ -69,3 +69,8 @@ Plano: docs/PLANO-catalogo-navegacao-cache.md
 - [x] Recomendações no rodapé do detalhe de filme e série, e ao terminar um filme.
 - [x] Sinal de "filme concluído" persistido em disco (a TV destrói a Activity durante o player).
 - [x] Chave da OpenAI por QR code: servidor local na TV + página no celular com link de ajuda da OpenAI.
+
+### Destaque que segue o foco (estilo Google TV)
+- [x] Arte 16:9 do TMDB (backdrop do get_vod_info) no topo da aba Filmes, com degradê escuro.
+- [x] Destaque fixo: ao focar um cartão, mostra nome, gênero, ano, duração, nota e sinopse do filme.
+- [x] Busca do detalhe adiada em 400 ms e guardada em memória, para não chamar o provedor por cartão.

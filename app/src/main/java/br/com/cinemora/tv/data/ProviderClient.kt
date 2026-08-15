@@ -32,6 +32,9 @@ class ProviderClient {
     fun loadMoviePlot(credentials: Credentials, videoId: String): String? =
         XtreamParser.moviePlot(request(credentials, "get_vod_info", mapOf("vod_id" to videoId)))
 
+    fun loadMovieExtra(credentials: Credentials, videoId: String): MovieExtra =
+        XtreamParser.movieExtra(request(credentials, "get_vod_info", mapOf("vod_id" to videoId)))
+
     /** Cada seção é opcional: um provedor sem canais ou séries não deve derrubar o catálogo. */
     private fun <T> section(load: () -> List<T>): List<T> = runCatching(load).getOrDefault(emptyList())
 

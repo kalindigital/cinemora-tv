@@ -11,10 +11,44 @@ import br.com.cinemora.tv.model.Video
 import org.json.JSONArray
 import org.json.JSONObject
 
+/** Complemento do filme: sinopse, arte 16:9, gênero e duração. */
+data class MovieExtra(
+    val plot: String?,
+    val backdrop: String?,
+    val genre: String?,
+    val duration: String?,
+)
+
 /** Converte as respostas JSON do player_api Xtream nos modelos do app. Funções puras. */
 object XtreamParser {
     fun isAuthenticated(json: String): Boolean =
         runCatching { JSONObject(json).optJSONObject("user_info")?.optInt("auth") == 1 }.getOrDefault(false)
+
+    /** Dados extras do filme, usados no destaque grande da lista. */
+    fun movieExtra(json: String): MovieExtra {
+        val info = runCatching { JSONObject(json).optJSONObject("info") }.getOrNull()
+            ?: return MovieExtra(null, null, null, null)
+        val backdrop = when (val bruto = info.opt("backdrop_path")) {
+            is JSONArray -> (0 until bruto.length()).map { bruto.optString(it) }.firstOrNull { it.isNotBlank() }
+            is String -> bruto.takeIf { it.isNotBlank() }
+            else -> null
+        }
+        return MovieExtra(
+            plot = info.optStringOrNull("plot") ?: info.optStringOrNull("description"),
+            backdrop = backdrop,
+            genre = info.optStringOrNull("genre"),
+            duration = formatDuration(info.optString("duration")),
+        )
+    }
+
+    /** "2:04:00" -> "2h04"; "0:45:00" -> "45min". */
+    private fun formatDuration(raw: String): String? {
+        val partes = raw.split(":").mapNotNull { it.trim().toIntOrNull() }
+        if (partes.size < 2) return null
+        val horas = partes[0]
+        val minutos = partes[1]
+        return if (horas > 0) "%dh%02d".format(horas, minutos) else "${minutos}min"
+    }
 
     /** A sinopse do filme só vem no get_vod_info (info.plot / info.description), não na listagem. */
     fun moviePlot(json: String): String? {

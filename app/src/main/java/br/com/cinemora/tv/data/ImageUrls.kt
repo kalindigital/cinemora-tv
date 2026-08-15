@@ -12,6 +12,9 @@ object ImageUrls {
 
     fun detail(url: String?): String? = resize(url, "w500")
 
+    /** Arte 16:9 do destaque: ocupa a largura da tela, então vem maior que as capas. */
+    fun backdrop(url: String?): String? = resize(url, "w1280")
+
     private val TMDB_SIZE = Regex("(https?://image\\.tmdb\\.org/t/p/)[^/]+(/)")
 
     private fun resize(url: String?, size: String): String? {

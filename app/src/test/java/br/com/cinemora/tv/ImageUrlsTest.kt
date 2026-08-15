@@ -29,4 +29,15 @@ class ImageUrlsTest {
     @Test fun `sem url continua sem url`() {
         assertNull(ImageUrls.card(null))
     }
+
+    @Test fun `backdrop pede a arte larga em http`() {
+        assertEquals(
+            "http://image.tmdb.org/t/p/w1280/abc.jpg",
+            ImageUrls.backdrop("https://image.tmdb.org/t/p/original/abc.jpg"),
+        )
+    }
+
+    @Test fun `backdrop ausente continua nulo`() {
+        assertEquals(null, ImageUrls.backdrop(null))
+    }
 }

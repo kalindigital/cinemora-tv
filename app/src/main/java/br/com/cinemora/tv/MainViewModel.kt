@@ -13,6 +13,7 @@ import br.com.cinemora.tv.data.CatalogMatcher
 import br.com.cinemora.tv.data.CatalogNews
 import br.com.cinemora.tv.data.CatalogSearch
 import br.com.cinemora.tv.data.FamilyFilter
+import br.com.cinemora.tv.data.MovieExtra
 import br.com.cinemora.tv.data.Watchlist
 import br.com.cinemora.tv.data.CinemoraRepository
 import br.com.cinemora.tv.data.SortOrder
@@ -40,6 +41,7 @@ import br.com.cinemora.tv.model.Credentials
 import br.com.cinemora.tv.model.Series
 import br.com.cinemora.tv.model.SeriesDetail
 import br.com.cinemora.tv.model.Video
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
 sealed interface AppState {
@@ -90,6 +92,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     var moviePlot: String? by mutableStateOf(null)
         private set
     var featuredPlot: String? by mutableStateOf(null)
+        private set
+    /** Filme em foco na lista de filmes: alimenta a arte grande do topo. */
+    var movieFocus: Video? by mutableStateOf(null)
+        private set
+    var movieFocusExtra: MovieExtra? by mutableStateOf(null)
         private set
     var aiState: AiState by mutableStateOf(AiState.Idle)
         private set
@@ -152,6 +159,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
     private var openedMovie: Video? = null
     private val executor = Executors.newSingleThreadExecutor()
+    // Fila própria: a arte do destaque não pode esperar atrás do carregamento do catálogo.
+    private val focoExecutor = Executors.newSingleThreadExecutor()
+    private val extraCache = ConcurrentHashMap<String, MovieExtra>()
+    private var focoSeq = 0
     private val mainHandler = Handler(Looper.getMainLooper())
 
     init {
@@ -324,6 +335,33 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun clearRecommendations() { recommendations = emptyList() }
+
+    /**
+     * Foco na fileira de filmes. O detalhe (sinopse, arte 16:9, duração) só existe no
+     * get_vod_info, então é buscado depois que o foco para: percorrer a fileira dispararia
+     * uma chamada por cartão e o provedor derruba a conexão.
+     */
+    fun onMovieFocused(video: Video?) {
+        focoSeq++
+        val seq = focoSeq
+        movieFocus = video
+        if (video == null) {
+            movieFocusExtra = null
+            return
+        }
+        val emCache = extraCache[video.id]
+        movieFocusExtra = emCache
+        if (emCache != null) return
+        mainHandler.postDelayed({
+            if (seq != focoSeq) return@postDelayed
+            focoExecutor.execute {
+                val credentials = repo.savedCredentials() ?: return@execute
+                val extra = runCatching { repo.loadMovieExtra(credentials, video.id) }.getOrNull() ?: return@execute
+                extraCache[video.id] = extra
+                mainHandler.post { if (seq == focoSeq) movieFocusExtra = extra }
+            }
+        }, ESPERA_FOCO)
+    }
 
     fun clearMoviePlot() { moviePlot = null; resumeMs = 0L }
 
@@ -637,9 +675,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun logout() { repo.logout(); seriesDetail = DetailState.Idle; state = AppState.Login }
     fun returnToLogin() { state = AppState.Login }
 
-    override fun onCleared() { executor.shutdownNow(); speaker.release(); live?.stop() }
+    override fun onCleared() {
+        executor.shutdownNow()
+        focoExecutor.shutdownNow()
+        speaker.release()
+        live?.stop()
+    }
 
     private companion object {
         const val AMOSTRA = "Olá! É assim que eu vou falar com você no Cinemora."
+        const val ESPERA_FOCO = 400L
     }
 }
