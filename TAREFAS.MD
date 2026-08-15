@@ -74,3 +74,4 @@ Plano: docs/PLANO-catalogo-navegacao-cache.md
 - [x] Arte 16:9 do TMDB (backdrop do get_vod_info) no topo da aba Filmes, com degradê escuro.
 - [x] Destaque fixo: ao focar um cartão, mostra nome, gênero, ano, duração, nota e sinopse do filme.
 - [x] Busca do detalhe adiada em 400 ms e guardada em memória, para não chamar o provedor por cartão.
+- [x] Cartões da aba Filmes em 16:9, fontes menores e destaque sem botão (o cartão já abre o filme).

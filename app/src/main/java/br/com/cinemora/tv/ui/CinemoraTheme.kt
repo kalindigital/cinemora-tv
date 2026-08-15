@@ -131,7 +131,12 @@ internal fun RowTitle(text: String) = Text(
     modifier = Modifier.padding(start = 32.dp, top = 24.dp, bottom = 10.dp),
 )
 
-/** Cartão-pôster vertical (filmes e séries), com destaque ao foco. */
+/**
+ * Cartão de filme ou série, com destaque ao foco.
+ *
+ * No modo largo a arte fica em 16:9 recortada do pôster: a capa 16:9 de verdade só existe
+ * no get_vod_info, uma chamada por título, inviável para a fileira inteira.
+ */
 @Composable
 internal fun PosterCard(
     title: String,
@@ -139,12 +144,13 @@ internal fun PosterCard(
     subtitle: String?,
     modifier: Modifier = Modifier,
     compacto: Boolean = false,
+    largo: Boolean = false,
     onFocus: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
     Column(
-        modifier.width(if (compacto) 108.dp else 150.dp)
+        modifier.width(if (largo) 228.dp else if (compacto) 108.dp else 150.dp)
             .onFocusChanged {
                 focused = it.isFocused
                 if (it.isFocused) onFocus?.invoke()
@@ -158,20 +164,22 @@ internal fun PosterCard(
     ) {
         AsyncImage(
             model = imageUrl, contentDescription = title, contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().height(if (compacto) 154.dp else 214.dp).background(Color(0xFF26313D)),
+            modifier = Modifier.fillMaxWidth()
+                .height(if (largo) 128.dp else if (compacto) 154.dp else 214.dp)
+                .background(Color(0xFF26313D)),
         )
         Text(
             title, color = Mist, fontWeight = FontWeight.Normal,
             minLines = 2, maxLines = 2,
             // Sem isto o Compose cortava a palavra no meio, sem indicar que havia mais texto.
             overflow = TextOverflow.Ellipsis,
-            fontSize = if (compacto) 11.sp else 13.sp,
-            lineHeight = if (compacto) 14.sp else 16.sp,
-            modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 8.dp),
+            fontSize = if (compacto) 11.sp else 12.sp,
+            lineHeight = if (compacto) 14.sp else 15.sp,
+            modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 7.dp),
         )
         if (subtitle != null) {
             Text(
-                subtitle, color = Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                subtitle, color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 3.dp, bottom = 8.dp),
             )
         } else {

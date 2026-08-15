@@ -107,10 +107,6 @@ internal fun MoviesSection(
             }
         }
     }
-    // O botão do banner aponta explicitamente para a primeira fileira: sem isso o
-    // D-pad fica preso no banner, porque a busca de foco não atravessa o hero alto.
-    val firstRow = remember { FocusRequester() }
-    val scope = rememberCoroutineScope()
     // O destaque mostra o filme em foco; sem foco (ao entrar na aba), a seleção do dia.
     val alvo = focado ?: featured
     val sinopse = if (focado != null) focadoExtra?.plot ?: focado.synopsis else featuredPlot ?: featured?.synopsis
@@ -122,23 +118,16 @@ internal fun MoviesSection(
             synopsis = sinopse,
             // A arte 16:9 chega depois do get_vod_info; até lá a capa evita o buraco preto.
             imageUrl = ImageUrls.backdrop(focadoExtra?.backdrop) ?: ImageUrls.detail(alvo?.coverUrl),
-            actionLabel = "Assistir",
-            onAction = alvo?.let { { onOpenMovie(it) } },
-            modifier = Modifier.fillMaxHeight(0.46f)
-                // Subindo das fileiras, o Compose revelava só o botão: aqui a lista volta ao topo.
-                .onFocusChanged { if (it.hasFocus) scope.launch { listState.animateScrollToItem(0) } },
-            hasRows = rows.isNotEmpty(),
-            downTarget = firstRow,
+            // Sem botão: o destaque é vitrine, quem abre o filme é o cartão em foco.
+            actionLabel = "",
+            onAction = null,
+            modifier = Modifier.fillMaxHeight(0.44f),
             eyebrow = if (focado == null) "SELEÇÃO DO DIA" else focadoExtra?.genre?.uppercase() ?: "EM DESTAQUE",
             meta = metaDoFilme(alvo, focadoExtra),
         )
         LazyColumn(state = listState, modifier = Modifier.weight(1f), contentPadding = PaddingValues(bottom = 48.dp)) {
-            itemsIndexed(rows) { index, (title, videos) ->
-                PosterRow(
-                    title, videos, onOpenMovie,
-                    if (index == 0) Modifier.focusRequester(firstRow) else Modifier,
-                    onFocus = onFocusMovie,
-                )
+            items(rows) { (title, videos) ->
+                PosterRow(title, videos, onOpenMovie, largo = true, onFocus = onFocusMovie)
             }
         }
     }
@@ -333,17 +322,17 @@ private fun Hero(
                 .widthIn(max = 560.dp),
         ) {
             Text(
-                eyebrow, color = Signal, fontSize = 13.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold,
+                eyebrow, color = Signal, fontSize = 11.sp, letterSpacing = 2.sp, fontWeight = FontWeight.Bold,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                title ?: "Seu catálogo está pronto", color = Mist, fontSize = 30.sp, lineHeight = 34.sp,
+                title ?: "Seu catálogo está pronto", color = Mist, fontSize = 26.sp, lineHeight = 30.sp,
                 fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
             if (meta != null) {
                 Spacer(Modifier.height(6.dp))
-                Text(meta, color = Color(0xFF9AA7B4), fontSize = 13.sp, maxLines = 1)
+                Text(meta, color = Color(0xFF9AA7B4), fontSize = 12.sp, maxLines = 1)
             }
             Spacer(Modifier.height(8.dp))
             Text(
@@ -351,7 +340,7 @@ private fun Hero(
                 // o convite só cabe quando não há nada selecionado.
                 synopsis?.takeIf { it.isNotBlank() }
                     ?: if (title == null) "Escolha um título nas fileiras abaixo para começar." else "",
-                color = Color(0xFFC4CED8), maxLines = 2, fontSize = 15.sp, lineHeight = 21.sp,
+                color = Color(0xFFC4CED8), maxLines = 3, fontSize = 13.sp, lineHeight = 19.sp,
             )
             if (onAction != null) {
                 Spacer(Modifier.height(16.dp))
@@ -382,6 +371,7 @@ internal fun PosterRow(
     onOpen: (Video) -> Unit,
     modifier: Modifier = Modifier,
     compacto: Boolean = false,
+    largo: Boolean = false,
     onFocus: ((Video) -> Unit)? = null,
 ) {
     val first = remember { FocusRequester() }
@@ -397,6 +387,7 @@ internal fun PosterRow(
                     video.title, ImageUrls.card(video.coverUrl), subtitle(video.year, video.rating),
                     if (index == 0) Modifier.focusRequester(first) else Modifier,
                     compacto = compacto,
+                    largo = largo,
                     onFocus = onFocus?.let { avisar -> { avisar(video) } },
                 ) { onOpen(video) }
             }
