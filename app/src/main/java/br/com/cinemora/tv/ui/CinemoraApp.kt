@@ -1,6 +1,7 @@
 package br.com.cinemora.tv.ui
 
 import androidx.compose.foundation.Image
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -403,6 +404,11 @@ private fun HomeShell(
     val posicaoCategorias = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
 
     val section = remember(sectionName) { runCatching { Section.valueOf(sectionName) }.getOrDefault(Section.FILMES) }
+    // Voltar de uma aba qualquer leva a Filmes; só de Filmes é que o Voltar sai do app
+    // (com a confirmação de sempre, tratada pela Activity).
+    BackHandler(enabled = section != Section.FILMES && openMovieId == null && openSeriesId == null && !configurandoChave) {
+        sectionName = Section.FILMES.name
+    }
     val movie = openMovieId?.let { id -> home.catalog.movies.firstOrNull { it.id == id } }
     val series = openSeriesId?.let { id -> home.catalog.series.firstOrNull { it.id == id } }
     // O detalhe substitui o conteúdo (em vez de sobrepor): mantê-lo por cima deixava a
