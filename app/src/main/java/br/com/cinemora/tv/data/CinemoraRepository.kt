@@ -49,6 +49,10 @@ class CinemoraRepository(
     fun loadMovieExtra(credentials: Credentials, videoId: String): MovieExtra =
         client.loadMovieExtra(credentials, videoId)
 
+    fun artes(): Map<String, String> = store.artes()
+
+    fun saveArtes(artes: Map<String, String>) = store.saveArtes(artes)
+
     fun userData(): UserData = store.userData()
 
     fun toggleFavorite(id: String): UserData = store.userData().toggleFavorite(id).also { store.saveUserData(it) }

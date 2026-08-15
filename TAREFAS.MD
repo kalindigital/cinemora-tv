@@ -75,3 +75,5 @@ Plano: docs/PLANO-catalogo-navegacao-cache.md
 - [x] Destaque fixo: ao focar um cartão, mostra nome, gênero, ano, duração, nota e sinopse do filme.
 - [x] Busca do detalhe adiada em 400 ms e guardada em memória, para não chamar o provedor por cartão.
 - [x] Cartões da aba Filmes em 16:9, fontes menores e destaque sem botão (o cartão já abre o filme).
+- [x] Arte 16:9 real também nos cartões, buscada só para o que aparece na tela e guardada em disco.
+- [x] Cartão de filme sem texto: nome, ano e nota ficam apenas no destaque do topo.

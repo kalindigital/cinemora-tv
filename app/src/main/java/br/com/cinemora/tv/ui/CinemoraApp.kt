@@ -85,7 +85,9 @@ fun CinemoraApp(
     featuredPlot: String?,
     movieFocus: Video?,
     movieFocusExtra: MovieExtra?,
+    movieArt: Map<String, String>,
     onFocusMovie: (Video?) -> Unit,
+    onNeedArt: (Video) -> Unit,
     aiState: AiState,
     resumeMs: Long,
     resumeOf: (String) -> Long,
@@ -180,7 +182,9 @@ fun CinemoraApp(
                     featuredPlot = featuredPlot,
                     movieFocus = movieFocus,
                     movieFocusExtra = movieFocusExtra,
+                    movieArt = movieArt,
                     onFocusMovie = onFocusMovie,
+                    onNeedArt = onNeedArt,
                     aiState = aiState,
                     resumeMs = resumeMs,
                     resumeOf = resumeOf,
@@ -283,7 +287,9 @@ private fun HomeShell(
     featuredPlot: String?,
     movieFocus: Video?,
     movieFocusExtra: MovieExtra?,
+    movieArt: Map<String, String>,
     onFocusMovie: (Video?) -> Unit,
+    onNeedArt: (Video) -> Unit,
     aiState: AiState,
     resumeMs: Long,
     resumeOf: (String) -> Long,
@@ -447,7 +453,7 @@ private fun HomeShell(
                 when (section) {
                     Section.FILMES -> MoviesSection(
                         home.catalog, home.userData, home.featured, featuredPlot, sortOrder, novidades,
-                        posicaoFilmes, movieFocus, movieFocusExtra, onFocusMovie,
+                        posicaoFilmes, movieFocus, movieFocusExtra, movieArt, onFocusMovie, onNeedArt,
                     ) { openMovieId = it.id }
                     Section.SERIES -> SeriesSection(
                         home.catalog, home.userData, home.featuredSeries, sortOrder, posicaoSeries,

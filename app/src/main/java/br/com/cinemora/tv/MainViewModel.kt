@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
@@ -13,6 +14,7 @@ import br.com.cinemora.tv.data.CatalogMatcher
 import br.com.cinemora.tv.data.CatalogNews
 import br.com.cinemora.tv.data.CatalogSearch
 import br.com.cinemora.tv.data.FamilyFilter
+import br.com.cinemora.tv.data.FilaArte
 import br.com.cinemora.tv.data.MovieExtra
 import br.com.cinemora.tv.data.Watchlist
 import br.com.cinemora.tv.data.CinemoraRepository
@@ -43,6 +45,7 @@ import br.com.cinemora.tv.model.SeriesDetail
 import br.com.cinemora.tv.model.Video
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import kotlin.concurrent.thread
 
 sealed interface AppState {
     data object Login : AppState
@@ -98,6 +101,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var movieFocusExtra: MovieExtra? by mutableStateOf(null)
         private set
+    /** Arte 16:9 por filme, preenchida aos poucos conforme os cartões aparecem na tela. */
+    val movieArt = mutableStateMapOf<String, String>()
     var aiState: AiState by mutableStateOf(AiState.Idle)
         private set
     /** Conversas com a IA: a atual e a lista para retomar. */
@@ -163,6 +168,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val focoExecutor = Executors.newSingleThreadExecutor()
     private val extraCache = ConcurrentHashMap<String, MovieExtra>()
     private var focoSeq = 0
+    private val filaArte = FilaArte()
+    @Volatile private var buscandoArte = true
+    private var artesNaoSalvas = 0
     private val mainHandler = Handler(Looper.getMainLooper())
 
     init {
@@ -170,6 +178,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // Republicar reforça o cartão na tela inicial da TV caso a escrita anterior tenha falhado.
         resumeEntry?.let { WatchNext.update(app, it) }
         autoLogin()
+        iniciarBuscaDeArte()
         hasOpenAiKey = openAi.isConfigured()
         chatSessions = repo.chatSessions()
         voiceMode = repo.voiceMode()
@@ -335,6 +344,49 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun clearRecommendations() { recommendations = emptyList() }
+
+    /**
+     * O cartão pede a própria arte ao aparecer. Quem busca é uma única linha de trabalho,
+     * do pedido mais recente para o mais antigo, para não disparar dezenas de chamadas
+     * quando a fileira passa correndo.
+     */
+    fun onArtNeeded(video: Video) {
+        if (movieArt.containsKey(video.id)) return
+        // O destaque busca o mesmo get_vod_info ao focar: se já passou por aqui, nada a pedir.
+        extraCache[video.id]?.backdrop?.let { movieArt[video.id] = it; return }
+        filaArte.pedir(video.id)
+    }
+
+    private fun iniciarBuscaDeArte() {
+        val doDisco = repo.artes()
+        if (doDisco.isNotEmpty()) {
+            movieArt.putAll(doDisco)
+            filaArte.resolvidos(doDisco.keys)
+        }
+        thread(isDaemon = true, name = "cinemora-arte") {
+            while (buscandoArte) {
+                val id = filaArte.proximo()
+                if (id == null) {
+                    Thread.sleep(ESPERA_FILA)
+                    continue
+                }
+                val credentials = repo.savedCredentials() ?: continue
+                val extra = runCatching { repo.loadMovieExtra(credentials, id) }.getOrNull() ?: continue
+                // Guardado inteiro: focar esse cartão depois não gasta outra chamada.
+                extraCache[id] = extra
+                val arte = extra.backdrop ?: continue
+                mainHandler.post {
+                    movieArt[id] = arte
+                    // Gravar a cada arte castigaria o disco da TV; em lotes o custo some.
+                    if (++artesNaoSalvas >= LOTE_ARTE) {
+                        artesNaoSalvas = 0
+                        val copia = movieArt.toMap()
+                        focoExecutor.execute { repo.saveArtes(copia) }
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * Foco na fileira de filmes. O detalhe (sinopse, arte 16:9, duração) só existe no
@@ -676,6 +728,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun returnToLogin() { state = AppState.Login }
 
     override fun onCleared() {
+        buscandoArte = false
+        repo.saveArtes(movieArt.toMap())
         executor.shutdownNow()
         focoExecutor.shutdownNow()
         speaker.release()
@@ -685,5 +739,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private companion object {
         const val AMOSTRA = "Olá! É assim que eu vou falar com você no Cinemora."
         const val ESPERA_FOCO = 400L
+        const val ESPERA_FILA = 200L
+        const val LOTE_ARTE = 12
     }
 }

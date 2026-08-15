@@ -168,6 +168,8 @@ internal fun PosterCard(
                 .height(if (largo) 128.dp else if (compacto) 154.dp else 214.dp)
                 .background(Color(0xFF26313D)),
         )
+        // No modo largo o cartão é só a arte: nome, ano e nota aparecem no destaque do topo.
+        if (largo) return@Column
         Text(
             title, color = Mist, fontWeight = FontWeight.Normal,
             minLines = 2, maxLines = 2,

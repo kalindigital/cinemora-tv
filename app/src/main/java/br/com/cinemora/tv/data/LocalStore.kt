@@ -16,6 +16,7 @@ class LocalStore(context: Context) {
     private val app = context.applicationContext
     private val prefs = app.getSharedPreferences("cinemora", Context.MODE_PRIVATE)
     private val catalogFile: File get() = File(app.filesDir, "catalog.json")
+    private val artFile: File get() = File(app.filesDir, "artes.json")
 
     fun saveCredentials(c: Credentials) {
         prefs.edit().putString(KEY_SERVER, c.serverUrl).putString(KEY_USER, c.username).putString(KEY_PASS, c.password).apply()
@@ -132,7 +133,21 @@ class LocalStore(context: Context) {
 
     fun clearCatalog() {
         catalogFile.delete()
+        artFile.delete()
         prefs.edit().remove(KEY_SAVED_AT).apply()
+    }
+
+    /**
+     * Arte 16:9 por filme (id -> endereço). Cada uma custa uma chamada ao provedor, então
+     * o que já foi buscado uma vez fica no disco e vale para as próximas aberturas.
+     */
+    fun artes(): Map<String, String> = runCatching {
+        val json = org.json.JSONObject(artFile.takeIf { it.exists() }?.readText() ?: "{}")
+        json.keys().asSequence().associateWith { json.getString(it) }
+    }.getOrDefault(emptyMap())
+
+    fun saveArtes(artes: Map<String, String>) {
+        runCatching { artFile.writeText(org.json.JSONObject(artes as Map<*, *>).toString()) }
     }
 
     /** Posição de retomada por título (chave derivada da URL do stream). */

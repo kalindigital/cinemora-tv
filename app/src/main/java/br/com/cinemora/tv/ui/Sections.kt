@@ -88,7 +88,9 @@ internal fun MoviesSection(
     listState: LazyListState,
     focado: Video?,
     focadoExtra: MovieExtra?,
+    arte: Map<String, String>,
     onFocusMovie: (Video?) -> Unit,
+    onNeedArt: (Video) -> Unit,
     onOpenMovie: (Video) -> Unit,
 ) {
     val byId = remember(catalog) { catalog.movies.associateBy { it.id } }
@@ -127,7 +129,10 @@ internal fun MoviesSection(
         )
         LazyColumn(state = listState, modifier = Modifier.weight(1f), contentPadding = PaddingValues(bottom = 48.dp)) {
             items(rows) { (title, videos) ->
-                PosterRow(title, videos, onOpenMovie, largo = true, onFocus = onFocusMovie)
+                PosterRow(
+                    title, videos, onOpenMovie, largo = true,
+                    arte = arte, onFocus = onFocusMovie, onNeedArt = onNeedArt,
+                )
             }
         }
     }
@@ -372,7 +377,9 @@ internal fun PosterRow(
     modifier: Modifier = Modifier,
     compacto: Boolean = false,
     largo: Boolean = false,
+    arte: Map<String, String> = emptyMap(),
     onFocus: ((Video) -> Unit)? = null,
+    onNeedArt: ((Video) -> Unit)? = null,
 ) {
     val first = remember { FocusRequester() }
     Column {
@@ -383,8 +390,12 @@ internal fun PosterRow(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             itemsIndexed(videos, key = { _, video -> video.id }) { index, video ->
+                // Enquanto a arte 16:9 não chega, a capa segura o lugar do cartão.
+                LaunchedEffect(video.id) { onNeedArt?.invoke(video) }
                 PosterCard(
-                    video.title, ImageUrls.card(video.coverUrl), subtitle(video.year, video.rating),
+                    video.title,
+                    arte[video.id]?.let { ImageUrls.detail(it) } ?: ImageUrls.card(video.coverUrl),
+                    subtitle(video.year, video.rating),
                     if (index == 0) Modifier.focusRequester(first) else Modifier,
                     compacto = compacto,
                     largo = largo,
