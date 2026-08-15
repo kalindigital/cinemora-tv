@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Star
@@ -52,6 +53,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,6 +63,7 @@ import br.com.cinemora.tv.DetailState
 import br.com.cinemora.tv.data.EpisodeQueue
 import br.com.cinemora.tv.data.ImageUrls
 import br.com.cinemora.tv.data.MovieExtra
+import br.com.cinemora.tv.data.Trailers
 import br.com.cinemora.tv.model.Episode
 import br.com.cinemora.tv.model.Season
 import br.com.cinemora.tv.model.Series
@@ -68,6 +71,13 @@ import br.com.cinemora.tv.model.Video
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+/** Sem o YouTube instalado não há onde tocar o trailer; avisar é melhor que não fazer nada. */
+private fun abrirTrailer(context: android.content.Context, videoId: String) {
+    if (!Trailers.abrir(context, videoId)) {
+        android.widget.Toast.makeText(context, "Não encontrei o YouTube nesta TV.", android.widget.Toast.LENGTH_SHORT).show()
+    }
+}
 
 /** Subir até o botão principal recoloca a página no topo, sem atrapalhar as demais opções. */
 private fun Modifier.aoFocarVoltarAoTopo(
@@ -95,6 +105,7 @@ internal fun MovieDetail(
     onAskVerdict: () -> Unit,
 ) {
     BackHandler(onBack = onClose)
+    val contexto = LocalContext.current
     val playFocus = remember { FocusRequester() }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -159,6 +170,9 @@ internal fun MovieDetail(
                         if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
                         onClick = onToggleFavorite,
                     )
+                    extra?.trailer?.let { trailer ->
+                        OpcaoMenu("Ver trailer", Icons.Rounded.Movie) { abrirTrailer(contexto, trailer) }
+                    }
                     OpcaoMenu("Vale a pena?", Icons.Rounded.AutoAwesome, onClick = onAskVerdict)
                     if (isWatched) {
                         // Basta estar no histórico: nem todo assistido tem posição salva.
@@ -236,6 +250,7 @@ internal fun SeriesDetailScreen(
     }
 
     BackHandler(onBack = onClose)
+    val contexto = LocalContext.current
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val playFocus = remember { FocusRequester() }
@@ -295,6 +310,9 @@ internal fun SeriesDetailScreen(
                     }
                     if (seasons.isNotEmpty()) {
                         OpcaoMenu("Ver episódios", Icons.Rounded.Menu) { vendoEpisodios = true }
+                    }
+                    extra?.trailer?.let { trailer ->
+                        OpcaoMenu("Ver trailer", Icons.Rounded.Movie) { abrirTrailer(contexto, trailer) }
                     }
                     OpcaoMenu(
                         if (isFavorite) "Nos favoritos" else "Favoritar",

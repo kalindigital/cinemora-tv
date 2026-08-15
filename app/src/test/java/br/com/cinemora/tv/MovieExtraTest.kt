@@ -69,4 +69,9 @@ class MovieExtraTest {
     @Test fun `texto de lista vazia nao vira endereco`() {
         assertNull(XtreamParser.movieExtra("""{"info":{"backdrop_path":"[]"}}""").backdrop)
     }
+
+    @Test fun `guarda o trailer quando o provedor manda`() {
+        assertEquals("mOuTbZhHCnY", XtreamParser.movieExtra("""{"info":{"youtube_trailer":"mOuTbZhHCnY"}}""").trailer)
+        assertNull(XtreamParser.movieExtra("""{"info":{"youtube_trailer":""}}""").trailer)
+    }
 }

@@ -19,6 +19,7 @@ data class MovieExtra(
     val duration: String?,
     val cast: String? = null,
     val director: String? = null,
+    val trailer: String? = null,
 )
 
 /** Converte as respostas JSON do player_api Xtream nos modelos do app. Funções puras. */
@@ -38,6 +39,7 @@ object XtreamParser {
             duration = formatDuration(info.optString("duration")),
             cast = info.optStringOrNull("cast"),
             director = info.optStringOrNull("director"),
+            trailer = Trailers.videoId(info.optStringOrNull("youtube_trailer")),
         )
     }
 
