@@ -75,9 +75,6 @@ import kotlinx.coroutines.launch
 internal fun movieKey(video: Video) = "m:${video.id}"
 internal fun seriesKey(series: Series) = "s:${series.id}"
 
-/** Espera antes de alinhar: o Compose também rola sozinho ao mover o foco. */
-private const val ESPERA_ALINHAR = 120L
-
 private fun subtitle(year: String?, rating: String?): String? =
     listOfNotNull(year, rating).joinToString("  ·  ").ifBlank { null }
 
@@ -516,10 +513,7 @@ internal fun PosterRow(
     // O item em foco vai para o começo da fileira; no fim da lista o Compose para onde dá.
     var itemAtivo by remember { mutableStateOf(-1) }
     LaunchedEffect(itemAtivo) {
-        if (itemAtivo >= 0) {
-            delay(ESPERA_ALINHAR)
-            rowState.animateScrollToItem(itemAtivo)
-        }
+        if (itemAtivo >= 0) rowState.animateScrollToItem(itemAtivo)
     }
     Column {
         RowTitle(title)
@@ -563,10 +557,7 @@ internal fun SeriesRow(
     val rowState = rememberLazyListState()
     var itemAtivo by remember { mutableStateOf(-1) }
     LaunchedEffect(itemAtivo) {
-        if (itemAtivo >= 0) {
-            delay(ESPERA_ALINHAR)
-            rowState.animateScrollToItem(itemAtivo)
-        }
+        if (itemAtivo >= 0) rowState.animateScrollToItem(itemAtivo)
     }
     Column {
         RowTitle(title)
@@ -599,10 +590,7 @@ private fun ChannelRow(title: String, channels: List<Channel>, onPlay: (Channel)
     val rowState = rememberLazyListState()
     var itemAtivo by remember { mutableStateOf(-1) }
     LaunchedEffect(itemAtivo) {
-        if (itemAtivo >= 0) {
-            delay(ESPERA_ALINHAR)
-            rowState.animateScrollToItem(itemAtivo)
-        }
+        if (itemAtivo >= 0) rowState.animateScrollToItem(itemAtivo)
     }
     Column {
         RowTitle(title)

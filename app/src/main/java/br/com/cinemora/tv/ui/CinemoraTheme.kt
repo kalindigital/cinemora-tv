@@ -1,6 +1,8 @@
 package br.com.cinemora.tv.ui
 
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -203,6 +205,8 @@ internal fun PosterCard(
     val forma = RoundedCornerShape(8.dp)
     val largura by animateDpAsState(
         if (abreNoFoco) VERTICAL_FOCADO_LARGURA else visual.larguraDp.dp,
+        // Curta e sem repique: a mola padrão passava do ponto e a fileira balançava junto.
+        animationSpec = tween(durationMillis = 160, easing = LinearOutSlowInEasing),
         label = "largura",
     )
     val altura = visual.alturaImagemDp.dp
