@@ -54,6 +54,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.cinemora.tv.DetailState
@@ -65,6 +66,7 @@ import br.com.cinemora.tv.model.Season
 import br.com.cinemora.tv.model.Series
 import br.com.cinemora.tv.model.Video
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Subir até o botão principal recoloca a página no topo, sem atrapalhar as demais opções. */
@@ -94,9 +96,15 @@ internal fun MovieDetail(
 ) {
     BackHandler(onBack = onClose)
     val playFocus = remember { FocusRequester() }
-    LaunchedEffect(video.id) { runCatching { playFocus.requestFocus() } }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    LaunchedEffect(video.id) {
+        runCatching { playFocus.requestFocus() }
+        // O foco no botão faz o Compose rolar até ele; devolvemos a página ao topo para o
+        // nome aparecer inteiro. Descendo pelas opções ela sobe de novo, como esperado.
+        delay(150)
+        runCatching { listState.scrollToItem(0) }
+    }
     val emAndamento = resumeMs > 0
     DetalheFundo(ImageUrls.backdrop(extra?.backdrop) ?: ImageUrls.detail(video.coverUrl), video.title) {
         LazyColumn(
@@ -107,8 +115,8 @@ internal fun MovieDetail(
             item {
                 Column(Modifier.fillMaxWidth(0.55f).padding(start = 44.dp, top = 44.dp, end = 20.dp)) {
                     Text(
-                        video.title, color = Mist, fontSize = 34.sp, lineHeight = 38.sp,
-                        fontWeight = FontWeight.ExtraBold, maxLines = 3,
+                        video.title, color = Mist, fontSize = 30.sp, lineHeight = 34.sp,
+                        fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.height(10.dp))
                     Text(
@@ -121,10 +129,10 @@ internal fun MovieDetail(
                         plot.isBlank() -> "Sem sinopse disponível."
                         else -> plot
                     }
-                    Text(synopsis, color = Color(0xFFC4CED8), fontSize = 14.sp, lineHeight = 20.sp, maxLines = 4)
+                    Text(synopsis, color = Color(0xFFC4CED8), fontSize = 13.sp, lineHeight = 19.sp, maxLines = 3)
                     extra?.cast?.let {
                         Spacer(Modifier.height(10.dp))
-                        Text("Elenco: $it", color = Muted, fontSize = 12.sp, maxLines = 2)
+                        Text("Elenco: $it", color = Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     extra?.director?.let {
                         Spacer(Modifier.height(3.dp))
@@ -231,7 +239,11 @@ internal fun SeriesDetailScreen(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val playFocus = remember { FocusRequester() }
-    LaunchedEffect(series.id) { runCatching { playFocus.requestFocus() } }
+    LaunchedEffect(series.id) {
+        runCatching { playFocus.requestFocus() }
+        delay(150)
+        runCatching { listState.scrollToItem(0) }
+    }
     val continuarEm = EpisodeQueue.resumeTarget(seasons, watchedOf, resumeOf)
     DetalheFundo(ImageUrls.backdrop(extra?.backdrop) ?: ImageUrls.detail(series.coverUrl), series.title) {
         LazyColumn(
@@ -242,8 +254,8 @@ internal fun SeriesDetailScreen(
             item {
                 Column(Modifier.fillMaxWidth(0.55f).padding(start = 44.dp, top = 44.dp, end = 20.dp)) {
                     Text(
-                        series.title, color = Mist, fontSize = 34.sp, lineHeight = 38.sp,
-                        fontWeight = FontWeight.ExtraBold, maxLines = 3,
+                        series.title, color = Mist, fontSize = 30.sp, lineHeight = 34.sp,
+                        fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.height(10.dp))
                     val temporadas = seasons.size.takeIf { it > 0 }
@@ -255,11 +267,11 @@ internal fun SeriesDetailScreen(
                     Spacer(Modifier.height(12.dp))
                     Text(
                         extra?.plot ?: series.synopsis ?: "Sem sinopse disponível.",
-                        color = Color(0xFFC4CED8), fontSize = 14.sp, lineHeight = 20.sp, maxLines = 4,
+                        color = Color(0xFFC4CED8), fontSize = 13.sp, lineHeight = 19.sp, maxLines = 3,
                     )
                     extra?.cast?.let {
                         Spacer(Modifier.height(10.dp))
-                        Text("Elenco: $it", color = Muted, fontSize = 12.sp, maxLines = 2)
+                        Text("Elenco: $it", color = Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Spacer(Modifier.height(18.dp))
                     when (state) {
