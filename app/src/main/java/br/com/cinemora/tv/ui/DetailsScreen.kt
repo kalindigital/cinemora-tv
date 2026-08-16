@@ -72,8 +72,19 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** Sem o YouTube instalado não há onde tocar o trailer; avisar é melhor que não fazer nada. */
+/**
+ * O trailer toca dentro do aplicativo, em tela cheia (TrailerActivity). Se aquela
+ * tela não conseguir embutir o vídeo, ela mesma abre o aplicativo do YouTube;
+ * aqui só resta o aviso para o caso raro de nem a tela subir.
+ */
 private fun abrirTrailer(context: android.content.Context, videoId: String) {
+    val interna = runCatching {
+        context.startActivity(
+            android.content.Intent(context, br.com.cinemora.tv.TrailerActivity::class.java)
+                .putExtra(br.com.cinemora.tv.TrailerActivity.EXTRA_VIDEO_ID, videoId),
+        )
+    }.isSuccess
+    if (interna) return
     if (!Trailers.abrir(context, videoId)) {
         android.widget.Toast.makeText(context, "Não encontrei o YouTube nesta TV.", android.widget.Toast.LENGTH_SHORT).show()
     }

@@ -23,6 +23,13 @@
                 android:resource="@xml/update_paths" />
         </provider>
         <activity android:name=".player.PlayerActivity" android:screenOrientation="landscape" android:exported="false" />
+        <!-- Trailer no player oficial do YouTube embutido, sem sair do aplicativo. -->
+        <activity
+            android:name=".TrailerActivity"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+            android:exported="false" />
         <activity
             android:name=".ResumeActivity"
             android:exported="true"
