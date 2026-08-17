@@ -71,7 +71,7 @@ object CatalogJson {
     private fun category(o: JSONObject) = Category(o.optString("id"), o.optString("name"))
 
     private fun movie(o: JSONObject) = Video(
-        id = o.optString("id"), title = o.optString("title"), categoryId = o.optString("categoryId"),
+        id = o.optString("id"), title = XtreamParser.cleanTitle(o.optString("title")), categoryId = o.optString("categoryId"),
         coverUrl = o.optStringOrNull("coverUrl"), streamUrl = o.optString("streamUrl"),
         year = o.optStringOrNull("year"), rating = o.optStringOrNull("rating"), synopsis = o.optStringOrNull("synopsis"),
     )
@@ -82,7 +82,7 @@ object CatalogJson {
     )
 
     private fun series(o: JSONObject) = Series(
-        id = o.optString("id"), title = o.optString("title"), categoryId = o.optString("categoryId"),
+        id = o.optString("id"), title = XtreamParser.cleanTitle(o.optString("title")), categoryId = o.optString("categoryId"),
         coverUrl = o.optStringOrNull("coverUrl"), year = o.optStringOrNull("year"),
         rating = o.optStringOrNull("rating"), synopsis = o.optStringOrNull("synopsis"),
         backdropUrl = o.optStringOrNull("backdropUrl"),

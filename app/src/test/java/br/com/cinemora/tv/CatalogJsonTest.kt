@@ -29,4 +29,14 @@ class CatalogJsonTest {
     @Test fun `decodificar json vazio devolve catalogo vazio`() {
         assertEquals(Catalog(), CatalogJson.decode("{}"))
     }
+
+    @Test fun `cache legado com ano e qualidade no titulo e limpo ao carregar`() {
+        val json = """{
+            "movies":[{"id":"1","title":"Avatar (2009) [4K]","categoryId":"c","streamUrl":"http://x/1.mp4"}],
+            "series":[{"id":"7","title":"Breaking Bad [1080p]","categoryId":"s"}]
+        }"""
+        val catalog = CatalogJson.decode(json)
+        assertEquals("Avatar", catalog.movies[0].title)
+        assertEquals("Breaking Bad", catalog.series[0].title)
+    }
 }

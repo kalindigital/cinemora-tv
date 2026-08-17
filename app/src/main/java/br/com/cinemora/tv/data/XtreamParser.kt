@@ -109,8 +109,11 @@ object XtreamParser {
     private fun yearFromTitle(title: String): String? =
         TITLE_YEAR.findAll(title).lastOrNull()?.value?.trim('(', ')')
 
-    /** Tira do nome o ano "(2009)" e as tags de qualidade entre colchetes "[4K]" que o provedor cola no título. */
-    private fun cleanTitle(raw: String): String =
+    /**
+     * Tira do nome o ano "(2009)" e as tags de qualidade entre colchetes "[4K]" que o provedor cola no título.
+     * Idempotente: aplicada tanto no parse fresco quanto ao reler o catálogo do cache em disco.
+     */
+    internal fun cleanTitle(raw: String): String =
         raw.replace(TITLE_YEAR, " ")
             .replace(TITLE_TAGS, " ")
             .replace(Regex("\\s{2,}"), " ")
