@@ -4,10 +4,13 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
+import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -31,7 +34,8 @@ class TrailerActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         videoId = intent.getStringExtra(EXTRA_VIDEO_ID).orEmpty()
-        if (videoId.isBlank()) { finish(); return }
+        Log.i(TAG, "abrindo trailer videoId='$videoId'")
+        if (videoId.isBlank()) { Log.w(TAG, "sem videoId: encerrando"); finish(); return }
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         window.decorView.systemUiVisibility =
@@ -51,8 +55,16 @@ class TrailerActivity : Activity() {
         view.addJavascriptInterface(Ponte(), TrailerPlayerPage.BRIDGE)
         view.webViewClient = object : WebViewClient() {
             override fun onReceivedError(v: WebView?, req: WebResourceRequest?, err: WebResourceError?) {
+                Log.w(TAG, "erro de rede em ${req?.url} principal=${req?.isForMainFrame}: ${err?.description}")
                 // Só a falha da própria página conta; recursos soltos do player não.
                 if (req?.isForMainFrame == true) cairParaYoutube()
+            }
+        }
+        // Sem isto os erros de JavaScript do player ficam invisíveis no logcat.
+        view.webChromeClient = object : WebChromeClient() {
+            override fun onConsoleMessage(msg: ConsoleMessage): Boolean {
+                Log.i(TAG, "console: ${msg.message()} (linha ${msg.lineNumber()})")
+                return true
             }
         }
         // A base precisa ser a origem do YouTube, senão a API do IFrame recusa o embed.
@@ -97,7 +109,9 @@ class TrailerActivity : Activity() {
         /** Erro do player: embed proibido manda para o YouTube; o resto só encerra. */
         @JavascriptInterface
         fun aoFalhar(codigo: Int) = runOnUiThread {
-            if (TrailerPlayerPage.ehEmbedProibido(codigo)) cairParaYoutube() else finish()
+            val motivo = if (TrailerPlayerPage.ehEmbedProibido(codigo)) "embed proibido pelo canal" else "falha do player"
+            Log.w(TAG, "erro $codigo ($motivo): abrindo no aplicativo do YouTube")
+            if (TrailerPlayerPage.deveCairParaYoutube(codigo)) cairParaYoutube() else finish()
         }
 
         @JavascriptInterface
@@ -126,5 +140,6 @@ class TrailerActivity : Activity() {
 
     companion object {
         const val EXTRA_VIDEO_ID = "videoId"
+        private const val TAG = "TrailerActivity"
     }
 }

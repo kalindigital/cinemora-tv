@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.os.SystemClock
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
@@ -37,6 +38,7 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var nextPanel: LinearLayout
     private lateinit var nextButton: Button
     private lateinit var seekBadge: TextView
+    private lateinit var bufferBadge: TextView
     private val store by lazy { LocalStore(this) }
 
     private var streamUrl = ""
@@ -47,6 +49,8 @@ class PlayerActivity : ComponentActivity() {
     private var queueLabels: List<String> = emptyList()
     private var queueIndex = 0
     private var confirmandoSaida = false
+    private var bufferandoDesde = 0L
+    private var ultimaRetomada = 0L
     private var autoNextEm = 0
     private var autoNextCancelado = false
     private var lastSeekAt = 0L
@@ -57,6 +61,7 @@ class PlayerActivity : ComponentActivity() {
     private val limparConfirmacao = Runnable { confirmandoSaida = false }
     private val tick = object : Runnable {
         override fun run() {
+            atualizarAvisoDeBuffer()
             updateNextPanel()
             ui.postDelayed(this, 1_000)
         }
@@ -83,6 +88,8 @@ class PlayerActivity : ComponentActivity() {
             controllerShowTimeoutMs = 4_000
             setShowNextButton(false)
             setShowPreviousButton(false)
+            // Roda de carregamento do próprio player, inclusive com os controles escondidos.
+            setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
             keepScreenOn = true
         }
         setContentView(buildLayout())
@@ -90,6 +97,13 @@ class PlayerActivity : ComponentActivity() {
         player.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_ENDED) onPlaybackFinished()
+                bufferandoDesde = if (state == Player.STATE_BUFFERING) {
+                    if (bufferandoDesde == 0L) SystemClock.elapsedRealtime() else bufferandoDesde
+                } else {
+                    0L
+                }
+                if (bufferandoDesde == 0L) ultimaRetomada = 0L
+                atualizarAvisoDeBuffer()
                 updateNextPanel()
             }
         })
@@ -117,6 +131,25 @@ class PlayerActivity : ComponentActivity() {
 
         startPlayback(streamUrl, currentTitle, restart = intent.getBooleanExtra(EXTRA_RESTART, false))
         ui.post(tick)
+    }
+
+    /**
+     * Mostra em que pé está o carregamento e, se a espera passar do razoável, refaz o pedido
+     * ao servidor — travar sem explicação é o que mais confunde quem está assistindo.
+     */
+    private fun atualizarAvisoDeBuffer() {
+        if (bufferandoDesde == 0L) {
+            bufferBadge.visibility = View.GONE
+            return
+        }
+        val parado = SystemClock.elapsedRealtime() - bufferandoDesde
+        val mensagem = BufferAviso.mensagem(parado)
+        bufferBadge.text = mensagem.orEmpty()
+        bufferBadge.visibility = if (mensagem == null) View.GONE else View.VISIBLE
+        if (BufferAviso.deveTentarDeNovo(parado) && SystemClock.elapsedRealtime() - ultimaRetomada > RETRY_MS) {
+            ultimaRetomada = SystemClock.elapsedRealtime()
+            player.prepare()
+        }
     }
 
     /** PlayerView ao fundo, título no topo e o painel de "próximo" no canto inferior. */
@@ -164,6 +197,19 @@ class PlayerActivity : ComponentActivity() {
             visibility = View.GONE
         }
         root.addView(seekBadge, FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
+
+        bufferBadge = TextView(this).apply {
+            setTextColor(Color.WHITE)
+            textSize = 15f
+            setBackgroundColor(PANEL_GRAY)
+            setPadding(28, 14, 28, 14)
+            visibility = View.GONE
+        }
+        root.addView(
+            bufferBadge,
+            FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM)
+                .apply { bottomMargin = 120 },
+        )
         return root
     }
 
@@ -386,6 +432,8 @@ class PlayerActivity : ComponentActivity() {
     }
 
     companion object {
+        /** Intervalo mínimo entre duas tentativas de retomar o mesmo stream. */
+        private const val RETRY_MS = 20_000L
         const val EXTRA_URL = "video_url"
         const val EXTRA_POSTER = "video_poster"
         const val EXTRA_TITLE = "video_title"

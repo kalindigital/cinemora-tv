@@ -78,6 +78,7 @@ import kotlinx.coroutines.launch
  * aqui só resta o aviso para o caso raro de nem a tela subir.
  */
 private fun abrirTrailer(context: android.content.Context, videoId: String) {
+    android.util.Log.i("TrailerActivity", "detalhes pediu trailer videoId='$videoId'")
     val interna = runCatching {
         context.startActivity(
             android.content.Intent(context, br.com.cinemora.tv.TrailerActivity::class.java)

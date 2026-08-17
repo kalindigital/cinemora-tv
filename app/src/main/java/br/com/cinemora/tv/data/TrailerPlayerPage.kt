@@ -19,8 +19,20 @@ object TrailerPlayerPage {
     /** Nome da ponte JavaScript ↔ Android usada pela tela do trailer. */
     const val BRIDGE = "CinemoraTrailer"
 
-    /** Códigos do YouTube para "o dono não permite tocar fora do site". */
-    fun ehEmbedProibido(codigo: Int): Boolean = codigo == 101 || codigo == 150
+    /**
+     * Códigos do YouTube para "o dono não permite tocar fora do site". A
+     * documentação lista 101 e 150; o 152 apareceu num trailer de estúdio real e
+     * significa a mesma coisa.
+     */
+    fun ehEmbedProibido(codigo: Int): Boolean = codigo == 101 || codigo == 150 || codigo == 152
+
+    /**
+     * Qualquer erro do player significa que o trailer não vai tocar embutido —
+     * seja embed proibido, vídeo removido ou falha do player. Em todos os casos
+     * o certo é abrir no aplicativo do YouTube: fechar a tela em silêncio
+     * deixava o usuário sem trailer e sem explicação.
+     */
+    fun deveCairParaYoutube(codigo: Int): Boolean = true
 
     fun html(videoId: String): String {
         val id = escapar(videoId)

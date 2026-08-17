@@ -98,3 +98,4 @@ Plano: docs/PLANO-catalogo-navegacao-cache.md
 - [x] Borda de foco pela metade e "Títulos semelhantes" com o mesmo cartão das listas.
 - [x] Correção: rolagem da tela de detalhe pulava ao andar entre as opções.
 - [x] Botão "Ver trailer" no detalhe de filme e série, abrindo o YouTube da TV (só aparece quando o provedor manda o trailer).
+- [x] Player mostra que está carregando (roda + aviso) e refaz o pedido ao servidor quando a espera passa de 20 s.

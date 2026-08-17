@@ -41,10 +41,21 @@ class TrailerPlayerPageTest {
     }
 
     @Test fun `erros de embed desativado sao tratados como impossivel tocar aqui`() {
-        // 101 e 150 são os códigos do YouTube para "o dono não permite embed"
+        // 101, 150 e 152 aparecem quando o dono do canal não permite embed —
+        // o 152 veio de um trailer real (Warner) e não está na documentação.
         assertTrue(TrailerPlayerPage.ehEmbedProibido(101))
         assertTrue(TrailerPlayerPage.ehEmbedProibido(150))
+        assertTrue(TrailerPlayerPage.ehEmbedProibido(152))
         assertFalse(TrailerPlayerPage.ehEmbedProibido(2))
         assertFalse(TrailerPlayerPage.ehEmbedProibido(5))
+    }
+
+    // Qualquer erro do player significa que aqui não vai tocar: some a tela e o
+    // trailer abre no aplicativo do YouTube. Fechar em silêncio deixava o
+    // usuário sem trailer nenhum e sem explicação.
+    @Test fun `qualquer erro do player leva o trailer para o YouTube`() {
+        for (codigo in listOf(2, 5, 100, 101, 150, 152, 999)) {
+            assertTrue("erro $codigo devia cair para o YouTube", TrailerPlayerPage.deveCairParaYoutube(codigo))
+        }
     }
 }

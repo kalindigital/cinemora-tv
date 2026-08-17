@@ -26,8 +26,8 @@ android {
         applicationId = "br.com.cinemora.tv"
         minSdk = 23
         targetSdk = 35
-        versionCode = 58
-        versionName = "1.12.3"
+        versionCode = 59
+        versionName = "1.12.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "GITHUB_REPO", "\"${secret("GITHUB_REPO")}\"")
     }
