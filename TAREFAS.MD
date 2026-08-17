@@ -99,3 +99,7 @@ Plano: docs/PLANO-catalogo-navegacao-cache.md
 - [x] Correção: rolagem da tela de detalhe pulava ao andar entre as opções.
 - [x] Botão "Ver trailer" no detalhe de filme e série, abrindo o YouTube da TV (só aparece quando o provedor manda o trailer).
 - [x] Player mostra que está carregando (roda + aviso) e refaz o pedido ao servidor quando a espera passa de 20 s.
+
+### Ajustes no banner de destaque e nos títulos
+- [x] Sinopse do banner de destaque ganha reticências ("…") quando o texto passa das linhas visíveis.
+- [x] Título do filme/série sem o ano "(2009)" e sem a qualidade entre colchetes "[4K]" (o ano continua na linha de dados).
