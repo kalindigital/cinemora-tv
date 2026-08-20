@@ -16,6 +16,11 @@ class TrailersTest {
         assertEquals("l0ae8gNI9u4", Trailers.videoId("http://www.youtube.com/embed/l0ae8gNI9u4?rel=0"))
     }
 
+    // O seletor de apps recebe o endereço web: é o que YouTube, SmartTube e navegador abrem.
+    @Test fun `endereco web aponta para o video no youtube`() {
+        assertEquals("https://www.youtube.com/watch?v=l0ae8gNI9u4", Trailers.enderecoWeb("l0ae8gNI9u4"))
+    }
+
     @Test fun `campo vazio ou estranho nao vira trailer`() {
         assertNull(Trailers.videoId(null))
         assertNull(Trailers.videoId(""))

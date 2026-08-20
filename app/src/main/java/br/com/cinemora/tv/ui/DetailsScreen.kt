@@ -72,10 +72,14 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** Sem o YouTube instalado não há onde tocar o trailer; avisar é melhor que não fazer nada. */
+/**
+ * Abre o trailer no seletor de apps do Android, para o usuário escolher onde ver
+ * (app do YouTube, SmartTube, navegador…). Reproduzir embutido esbarrava em vídeos
+ * com embed bloqueado pelo canal; deixar o Android escolher o app sempre toca.
+ */
 private fun abrirTrailer(context: android.content.Context, videoId: String) {
     if (!Trailers.abrir(context, videoId)) {
-        android.widget.Toast.makeText(context, "Não encontrei o YouTube nesta TV.", android.widget.Toast.LENGTH_SHORT).show()
+        android.widget.Toast.makeText(context, "Não encontrei um app para abrir o trailer.", android.widget.Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -140,7 +144,7 @@ internal fun MovieDetail(
                         plot.isBlank() -> "Sem sinopse disponível."
                         else -> plot
                     }
-                    Text(synopsis, color = Color(0xFFC4CED8), fontSize = 13.sp, lineHeight = 19.sp, maxLines = 3)
+                    Text(synopsis, color = Color(0xFFC4CED8), fontSize = 13.sp, lineHeight = 19.sp)
                     extra?.cast?.let {
                         Spacer(Modifier.height(10.dp))
                         Text("Elenco: $it", color = Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -282,7 +286,7 @@ internal fun SeriesDetailScreen(
                     Spacer(Modifier.height(12.dp))
                     Text(
                         extra?.plot ?: series.synopsis ?: "Sem sinopse disponível.",
-                        color = Color(0xFFC4CED8), fontSize = 13.sp, lineHeight = 19.sp, maxLines = 3,
+                        color = Color(0xFFC4CED8), fontSize = 13.sp, lineHeight = 19.sp,
                     )
                     extra?.cast?.let {
                         Spacer(Modifier.height(10.dp))

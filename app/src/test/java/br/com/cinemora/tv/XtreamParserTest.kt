@@ -44,6 +44,18 @@ class XtreamParserTest {
         assertEquals("2005", XtreamParser.movies(json, creds)[0].year)
     }
 
+    @Test fun `titulo do filme perde o ano e a qualidade mas o ano continua no campo year`() {
+        val json = """[{"stream_id":"1","name":"Avatar (2009) [4K]","category_id":"c","container_extension":"mp4"}]"""
+        val movie = XtreamParser.movies(json, creds)[0]
+        assertEquals("Avatar", movie.title)
+        assertEquals("2009", movie.year)
+    }
+
+    @Test fun `titulo da serie perde as tags entre colchetes`() {
+        val json = """[{"series_id":"7","name":"Breaking Bad [1080p] [DUAL]","category_id":"s"}]"""
+        assertEquals("Breaking Bad", XtreamParser.series(json)[0].title)
+    }
+
     @Test fun `canais montam url de live`() {
         val json = """[{"stream_id":"9","name":"Canal","category_id":"l","stream_icon":"http://i/9.png"}]"""
         val channels = XtreamParser.channels(json, creds)

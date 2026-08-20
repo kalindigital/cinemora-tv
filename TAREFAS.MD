@@ -98,3 +98,12 @@ Plano: docs/PLANO-catalogo-navegacao-cache.md
 - [x] Borda de foco pela metade e "Títulos semelhantes" com o mesmo cartão das listas.
 - [x] Correção: rolagem da tela de detalhe pulava ao andar entre as opções.
 - [x] Botão "Ver trailer" no detalhe de filme e série, abrindo o YouTube da TV (só aparece quando o provedor manda o trailer).
+- [x] Player mostra que está carregando (roda + aviso) e refaz o pedido ao servidor quando a espera passa de 20 s.
+
+### Ajustes no banner de destaque e nos títulos
+- [x] Sinopse do banner de destaque ganha reticências ("…") quando o texto passa das linhas visíveis.
+- [x] Título do filme/série sem o ano "(2009)" e sem a qualidade entre colchetes "[4K]" (o ano continua na linha de dados).
+- [x] Correção: a limpeza do título também vale ao reler o catálogo do cache, para os catálogos já salvos saírem limpos sem precisar limpar o cache.
+- [x] Cartão em pé só abre em 16:9 depois de 3s parado no foco; trocar de cartão antes zera a espera.
+- [x] Trailer deixa de tocar embutido (dava erro com embed bloqueado pelo canal) e passa a abrir pelo "Abrir com" nativo do Android (uma vez/sempre), para o usuário escolher e fixar o app (YouTube, SmartTube…).
+- [x] Sinopse completa na tela de detalhes de filme e série (sem cortar em 3 linhas).
