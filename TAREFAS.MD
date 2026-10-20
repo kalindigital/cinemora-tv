@@ -107,3 +107,7 @@ Plano: docs/PLANO-catalogo-navegacao-cache.md
 - [x] Cartão em pé só abre em 16:9 depois de 3s parado no foco; trocar de cartão antes zera a espera.
 - [x] Trailer deixa de tocar embutido (dava erro com embed bloqueado pelo canal) e passa a abrir pelo "Abrir com" nativo do Android (uma vez/sempre), para o usuário escolher e fixar o app (YouTube, SmartTube…).
 - [x] Sinopse completa na tela de detalhes de filme e série (sem cortar em 3 linhas).
+
+### Integração com o launcher Free My TV
+- [x] `LauncherProvider`: fileiras de Filmes e Séries (categorias, ordem e filtros do app) e capas para launchers com a permissão `LAUNCHER_CATALOG`, sem usuário, senha nem stream.
+- [x] Link `cinemora://br.com.cinemora.tv/movie/{id}` (e `/series/{id}`) abre o título na tela de detalhes.

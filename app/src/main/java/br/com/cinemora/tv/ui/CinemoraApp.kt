@@ -1,5 +1,6 @@
 package br.com.cinemora.tv.ui
 
+import br.com.cinemora.tv.launcher.OpenLink
 import androidx.compose.foundation.Image
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -173,6 +174,8 @@ fun CinemoraApp(
     onDownloadUpdate: () -> Unit,
     onDismissUpdate: () -> Unit,
     onLogout: () -> Unit,
+    openRequest: OpenLink? = null,
+    onOpenHandled: () -> Unit = {},
 ) {
     MaterialTheme(
         colorScheme = darkColorScheme(
@@ -276,6 +279,8 @@ fun CinemoraApp(
                     onDownloadUpdate = onDownloadUpdate,
                     onDismissUpdate = onDismissUpdate,
                     onLogout = onLogout,
+                    openRequest = openRequest,
+                    onOpenHandled = onOpenHandled,
                 )
                 is AppState.Error -> ErrorScreen(state.message, onRetry)
             }
@@ -389,12 +394,31 @@ private fun HomeShell(
     onDownloadUpdate: () -> Unit,
     onDismissUpdate: () -> Unit,
     onLogout: () -> Unit,
+    openRequest: OpenLink? = null,
+    onOpenHandled: () -> Unit = {},
 ) {
     // Guardado como Saveable (aba + item aberto): a TV pode destruir esta Activity enquanto o
     // player está em cena, e sem isso o "voltar" recomeçaria o app do zero.
     var sectionName by rememberSaveable { mutableStateOf(Section.FILMES.name) }
     var openMovieId by rememberSaveable { mutableStateOf<String?>(null) }
     var openSeriesId by rememberSaveable { mutableStateOf<String?>(null) }
+    // Um título pedido de fora (o launcher): abre o detalhe dele, por cima da aba certa.
+    LaunchedEffect(openRequest, home.catalog) {
+        val pedido = openRequest ?: return@LaunchedEffect
+        when (pedido.kind) {
+            OpenLink.MOVIE -> if (home.catalog.movies.any { it.id == pedido.id }) {
+                sectionName = Section.FILMES.name
+                openSeriesId = null
+                openMovieId = pedido.id
+            }
+            OpenLink.SERIES -> if (home.catalog.series.any { it.id == pedido.id }) {
+                sectionName = Section.SERIES.name
+                openMovieId = null
+                openSeriesId = pedido.id
+            }
+        }
+        onOpenHandled()
+    }
     var configurandoChave by rememberSaveable { mutableStateOf(false) }
     val contentFocus = remember { FocusRequester() }
     // Guardados aqui fora: as seções saem da tela quando um detalhe abre, e a posição
