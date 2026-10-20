@@ -1,5 +1,6 @@
 package br.com.cinemora.tv
 
+import br.com.cinemora.tv.launcher.OpenLink
 import android.app.Application
 import android.os.Handler
 import android.os.Looper
@@ -257,6 +258,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun dismissUpdate() { updateState = UpdateState.Idle }
 
     fun dismissResume() { resumeEntry = null }
+
+    /** Título pedido pelo launcher, aberto no detalhe assim que o catálogo tiver ele. */
+    var openRequest: OpenLink? by mutableStateOf(null)
+        private set
+
+    fun requestOpen(link: OpenLink?) { if (link != null) openRequest = link }
+
+    fun openHandled() { openRequest = null }
 
     fun refreshResume() { resumeEntry = repo.resumeEntries().firstOrNull() }
 

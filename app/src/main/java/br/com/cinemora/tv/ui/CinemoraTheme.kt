@@ -26,6 +26,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
 
 internal val Ink = Color(0xFF07090D)
 internal val Panel = Color(0xFF141019)
@@ -179,6 +181,9 @@ private val CardVisual.alturaImagemDp
  */
 private val VERTICAL_FOCADO_LARGURA = (CardVisual.VERTICAL.alturaImagemDp * 16 / 9).dp
 
+/** Tempo parado no foco antes do cartão em pé abrir em 16:9. Sair do cartão antes disso cancela a espera. */
+private const val ATRASO_ABERTURA_16X9 = 3000L
+
 /**
  * Cartão de filme ou série, com destaque ao foco.
  *
@@ -200,8 +205,17 @@ internal fun PosterCard(
     var focused by remember { mutableStateOf(false) }
     val limpo = visual == CardVisual.LIMPO
     val vertical = visual == CardVisual.VERTICAL
+    // O cartão em pé só vira 16:9 depois de 3s parado no foco; trocar de cartão antes zera a espera.
+    var esperaCumprida by remember { mutableStateOf(false) }
+    LaunchedEffect(focused) {
+        esperaCumprida = false
+        if (focused) {
+            delay(ATRASO_ABERTURA_16X9)
+            esperaCumprida = true
+        }
+    }
     // Só abre em 16:9 quando existe arte larga; senão o pôster ficaria cortado nas laterais.
-    val abreNoFoco = vertical && focused && arteLarga != null
+    val abreNoFoco = vertical && focused && esperaCumprida && arteLarga != null
     val forma = RoundedCornerShape(8.dp)
     val largura by animateDpAsState(
         if (abreNoFoco) VERTICAL_FOCADO_LARGURA else visual.larguraDp.dp,

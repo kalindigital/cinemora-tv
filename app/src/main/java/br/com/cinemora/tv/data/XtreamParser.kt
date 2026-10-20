@@ -92,7 +92,7 @@ object XtreamParser {
         val id = item.optString("stream_id").ifBlank { return@mapNotNull null }
         Video(
             id = id,
-            title = item.optString("name", "Sem título"),
+            title = cleanTitle(item.optString("name", "Sem título")),
             categoryId = item.optString("category_id"),
             coverUrl = item.optStringOrNull("stream_icon"),
             streamUrl = StreamUrlBuilder.movie(credentials, id, item.optString("container_extension", "mp4")),
@@ -104,9 +104,23 @@ object XtreamParser {
     }
 
     private val TITLE_YEAR = Regex("\\((19|20)\\d{2}\\)")
+    private val TITLE_TAGS = Regex("\\[[^\\]]*\\]")
 
     private fun yearFromTitle(title: String): String? =
         TITLE_YEAR.findAll(title).lastOrNull()?.value?.trim('(', ')')
+
+    /**
+     * Tira do nome o ano "(2009)" e as tags de qualidade entre colchetes "[4K]" que o provedor cola no título.
+     * Idempotente: aplicada tanto no parse fresco quanto ao reler o catálogo do cache em disco.
+     */
+    internal fun cleanTitle(raw: String): String =
+        raw.replace(TITLE_YEAR, " ")
+            .replace(TITLE_TAGS, " ")
+            .replace(Regex("\\s{2,}"), " ")
+            .trim()
+            .trim('-', '–', '|', '·')
+            .trim()
+            .ifBlank { raw.trim() }
 
     fun channels(json: String, credentials: Credentials): List<Channel> = JSONArray(json).objects().mapNotNull { item ->
         val id = item.optString("stream_id").ifBlank { return@mapNotNull null }
@@ -123,7 +137,7 @@ object XtreamParser {
         val id = item.optString("series_id").ifBlank { return@mapNotNull null }
         Series(
             id = id,
-            title = item.optString("name", "Sem título"),
+            title = cleanTitle(item.optString("name", "Sem título")),
             categoryId = item.optString("category_id"),
             coverUrl = item.optStringOrNull("cover"),
             year = item.optStringOrNull("year") ?: item.optString("releaseDate").take(4).takeIf { it.length == 4 && it.all(Char::isDigit) },

@@ -1,5 +1,6 @@
 package br.com.cinemora.tv
 
+import br.com.cinemora.tv.launcher.OpenLink
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -41,6 +42,7 @@ class MainActivity : ComponentActivity() {
                 onBackPressedDispatcher.onBackPressed()
             }
         }
+        if (savedInstanceState == null) viewModel.requestOpen(openLinkOf(intent))
         setContent {
             CinemoraApp(
                 state = viewModel.state,
@@ -139,8 +141,16 @@ class MainActivity : ComponentActivity() {
                 onDownloadUpdate = viewModel::downloadUpdate,
                 onDismissUpdate = viewModel::dismissUpdate,
                 onLogout = viewModel::logout,
+                openRequest = viewModel.openRequest,
+                onOpenHandled = viewModel::openHandled,
             )
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        viewModel.requestOpen(openLinkOf(intent))
     }
 
     override fun onResume() {
@@ -184,7 +194,16 @@ class MainActivity : ComponentActivity() {
             putExtra(PlayerActivity.EXTRA_POSTER, poster)
         }
 
-    private companion object {
-        const val CONFIRMACAO_MS = 3_000L
+    private fun openLinkOf(intent: Intent?): OpenLink? {
+        val kind = intent?.getStringExtra(EXTRA_OPEN_KIND) ?: return null
+        val id = intent.getStringExtra(EXTRA_OPEN_ID) ?: return null
+        return OpenLink.parse(listOf(kind, id))
+    }
+
+    companion object {
+        private const val CONFIRMACAO_MS = 3_000L
+        /** Filme ou série a abrir no detalhe (ResumeActivity, vindo do launcher). */
+        const val EXTRA_OPEN_KIND = "open_kind"
+        const val EXTRA_OPEN_ID = "open_id"
     }
 }

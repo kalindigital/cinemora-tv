@@ -454,6 +454,7 @@ private fun InfoDestaque(
             synopsis?.takeIf { it.isNotBlank() }
                 ?: if (title == null) "Escolha um título nas fileiras abaixo para começar." else "",
             color = Color(0xFFC4CED8), maxLines = 2, fontSize = 13.sp, lineHeight = 19.sp,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
