@@ -111,3 +111,4 @@ Plano: docs/PLANO-catalogo-navegacao-cache.md
 ### Integração com o launcher Free My TV
 - [x] `LauncherProvider`: fileiras de Filmes e Séries (categorias, ordem e filtros do app) e capas para launchers com a permissão `LAUNCHER_CATALOG`, sem usuário, senha nem stream.
 - [x] Link `cinemora://br.com.cinemora.tv/movie/{id}` (e `/series/{id}`) abre o título na tela de detalhes.
+- [x] Busca para o launcher: `/search/{movie|series}?q=` com as mesmas regras de filtro, cada palavra no título, sem acento.

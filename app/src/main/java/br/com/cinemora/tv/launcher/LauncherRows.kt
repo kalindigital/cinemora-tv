@@ -46,6 +46,38 @@ object LauncherRows {
         }
     }
 
+    /**
+     * Busca pelo nome, como na Pesquisa do app: cada palavra digitada tem de aparecer no título (sem acento, sem
+     * caixa; "homem aranha" também acha "Homem-Aranha"). Os que começam pela busca vêm primeiro.
+     */
+    fun searchMovies(catalog: Catalog, query: String, hideAdult: Boolean, family: Boolean): List<LauncherItem> {
+        val c = filtrado(catalog, hideAdult, family)
+        return buscar(query, c.movies, { it.title }) { LauncherItem(it.id, it.title, it.year, it.rating) }
+    }
+
+    fun searchSeries(catalog: Catalog, query: String, hideAdult: Boolean, family: Boolean): List<LauncherItem> {
+        val c = filtrado(catalog, hideAdult, family)
+        return buscar(query, c.series, { it.title }) { LauncherItem(it.id, it.title, it.year, it.rating) }
+    }
+
+    private fun <T> buscar(query: String, itens: List<T>, titulo: (T) -> String, item: (T) -> LauncherItem): List<LauncherItem> {
+        val q = normalizar(query)
+        val palavras = q.split(" ").filter { it.isNotEmpty() }
+        if (palavras.isEmpty()) return emptyList()
+        val achados = itens.filter { t ->
+            val n = normalizar(titulo(t))
+            val compacto = n.replace(" ", "")
+            palavras.all { n.contains(it) || compacto.contains(it) }
+        }
+        return achados.sortedBy { if (normalizar(titulo(it)).startsWith(q)) 0 else 1 }.take(MAX_ITEMS).map(item)
+    }
+
+    private val ACENTOS = Regex("\\p{Mn}+")
+    private val SEPARADORES = Regex("[^a-z0-9]+")
+
+    private fun normalizar(raw: String) = java.text.Normalizer.normalize(raw.lowercase(), java.text.Normalizer.Form.NFD)
+        .replace(ACENTOS, "").replace(SEPARADORES, " ").trim()
+
     /** A capa de um título (para o provedor buscar e entregar a imagem). */
     fun coverOf(catalog: Catalog, kind: String, id: String): String? = when (kind) {
         OpenLink.MOVIE -> catalog.movies.firstOrNull { it.id == id }?.coverUrl

@@ -63,4 +63,17 @@ class LauncherRowsTest {
         assertNull(OpenLink.parse(listOf("movie")))
         assertNull(OpenLink.parse(listOf("movie", " ")))
     }
+
+    @Test fun `busca por palavras sem acento e com os que comecam pela busca primeiro`() {
+        val c = Catalog(
+            movieCategories = listOf(Category("a", "A")),
+            movies = listOf(movie("1", "O Espetacular Homem-Aranha", "a"), movie("2", "Homem-Aranha: Longe de Casa", "a"),
+                movie("3", "Ação Total", "a"), movie("4", "[XXX] Homem Aranha", "a")),
+        )
+        assertEquals(listOf("2", "1", "4"), LauncherRows.searchMovies(c, "homem aranha", false, false).map { it.id })
+        assertEquals(listOf("2", "1"), LauncherRows.searchMovies(c, "Homem-Aranha", true, false).map { it.id })
+        assertEquals(listOf("3"), LauncherRows.searchMovies(c, "acao", false, false).map { it.id })
+        assertEquals(emptyList<String>(), LauncherRows.searchMovies(c, "  ", false, false).map { it.id })
+        assertEquals(listOf("9"), LauncherRows.searchSeries(catalog, "serie", false, false).map { it.id })
+    }
 }

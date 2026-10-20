@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit
  * e a imagem. Usuário, senha e links de stream ficam aqui dentro.
  *
  *  content://br.com.cinemora.tv.launcher/rows/movie   (ou /rows/series)
+ *  content://br.com.cinemora.tv.launcher/search/movie?q=texto   (ou /search/series)
  *  content://br.com.cinemora.tv.launcher/cover/movie/{id}   (ou /cover/series/{id})
  *
  * Abrir um título: cinemora://br.com.cinemora.tv/movie/{id} (ResumeActivity).
@@ -37,10 +38,20 @@ class LauncherProvider : ContentProvider() {
     override fun query(uri: Uri, projection: Array<out String>?, selection: String?, args: Array<out String>?, sort: String?): Cursor {
         val cursor = MatrixCursor(COLUMNS)
         val seg = uri.pathSegments
-        if (seg.size != 2 || seg[0] != "rows") return cursor
+        if (seg.size != 2 || (seg[0] != "rows" && seg[0] != "search")) return cursor
         val store = LocalStore(context ?: return cursor)
         if (store.credentials() == null) return cursor    // saiu da conta: nada para mostrar
         val catalog = catalog() ?: return cursor
+        if (seg[0] == "search") {
+            val q = uri.getQueryParameter("q").orEmpty().take(80)
+            val itens = when (seg[1]) {
+                OpenLink.MOVIE -> LauncherRows.searchMovies(catalog, q, store.hideAdult(), store.familyMode())
+                OpenLink.SERIES -> LauncherRows.searchSeries(catalog, q, store.hideAdult(), store.familyMode())
+                else -> return cursor
+            }
+            itens.forEach { cursor.addRow(arrayOf<Any?>(0, q, it.id, it.title, it.year, it.rating)) }
+            return cursor
+        }
         val rows = when (seg[1]) {
             OpenLink.MOVIE -> LauncherRows.movies(catalog, store.hideAdult(), store.familyMode(), store.sortOrder())
             OpenLink.SERIES -> LauncherRows.series(catalog, store.hideAdult(), store.familyMode(), store.sortOrder())
