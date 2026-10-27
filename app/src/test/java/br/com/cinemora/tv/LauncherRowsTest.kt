@@ -1,6 +1,7 @@
 package br.com.cinemora.tv
 
 import br.com.cinemora.tv.data.SortOrder
+import br.com.cinemora.tv.data.UserData
 import br.com.cinemora.tv.launcher.LauncherRows
 import br.com.cinemora.tv.launcher.OpenLink
 import br.com.cinemora.tv.model.Catalog
@@ -75,5 +76,25 @@ class LauncherRowsTest {
         assertEquals(listOf("3"), LauncherRows.searchMovies(c, "acao", false, false).map { it.id })
         assertEquals(emptyList<String>(), LauncherRows.searchMovies(c, "  ", false, false).map { it.id })
         assertEquals(listOf("9"), LauncherRows.searchSeries(catalog, "serie", false, false).map { it.id })
+    }
+
+    @Test fun `continuar assistindo e favoritos vem antes das categorias`() {
+        val user = UserData(favorites = setOf("m:2", "m:5", "s:9"), watched = listOf("5", "1", "sumiu"))
+        val rows = LauncherRows.movies(catalog, false, false, SortOrder.ALFABETICA, user)
+        assertEquals(listOf("Continuar assistindo", "Favoritos", "Ação", "XXX Adultos", "Infantil"), rows.map { it.title })
+        assertEquals(listOf("5", "1"), rows[0].items.map { it.id })
+        assertEquals(listOf("2", "5"), rows[1].items.map { it.id })
+    }
+
+    @Test fun `series tambem tem continuar e favoritos e filtros valem para eles`() {
+        val user = UserData(favorites = setOf("s:9"), watched = listOf("s:9"))
+        assertEquals(listOf("Continuar assistindo", "Favoritos", "Drama"),
+            LauncherRows.series(catalog, false, false, SortOrder.PADRAO, user).map { it.title })
+        val adulto = UserData(favorites = setOf("m:4"), watched = listOf("4"))
+        assertEquals(listOf("Ação", "Infantil"), LauncherRows.movies(catalog, true, false, SortOrder.PADRAO, adulto).map { it.title })
+    }
+
+    @Test fun `sem historico nem favoritos ficam so as categorias`() {
+        assertEquals(listOf("Drama"), LauncherRows.series(catalog, false, false, SortOrder.PADRAO, UserData()).map { it.title })
     }
 }

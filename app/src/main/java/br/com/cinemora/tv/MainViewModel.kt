@@ -16,7 +16,6 @@ import br.com.cinemora.tv.data.CatalogNews
 import br.com.cinemora.tv.data.CatalogSearch
 import br.com.cinemora.tv.data.FilaArte
 import br.com.cinemora.tv.data.MovieExtra
-import br.com.cinemora.tv.data.Watchlist
 import br.com.cinemora.tv.data.CinemoraRepository
 import br.com.cinemora.tv.data.SortOrder
 import br.com.cinemora.tv.data.UpdateInfo
@@ -151,10 +150,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Títulos que entraram no catálogo desde a última atualização. */
     var novidades: List<Video> by mutableStateOf(emptyList())
         private set
-    var watchlist: List<String> by mutableStateOf(emptyList())
-        private set
-    var chegaram: List<Pair<String, Video>> by mutableStateOf(emptyList())
-        private set
     var tasteProfile: String? by mutableStateOf(null)
         private set
     /** Texto avulso da IA (resumo da série, veredito do filme). */
@@ -211,7 +206,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         liveEnabled = repo.liveEnabled()
         familyMode = repo.familyMode()
         hideAdult = repo.hideAdult()
-        watchlist = repo.watchlist()
         tasteProfile = repo.tasteProfile()
         checkForUpdate(silencioso = true)
     }
@@ -298,8 +292,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 val conhecidos = repo.knownIds()
                 val novos = CatalogNews.novidades(conteudo.catalog, conhecidos)
                 repo.saveKnownIds(CatalogNews.idsConhecidos(conteudo.catalog))
-                val esperados = Watchlist.chegaram(repo.watchlist(), conteudo.catalog)
-                mainHandler.post { novidades = novos; chegaram = esperados }
+                mainHandler.post { novidades = novos }
             }
             // A "Seleção do dia" é 16:9 fixo: pedir a arte antes evita o cartão abrir sem ela.
             loaded.getOrNull()?.selecaoFilmes?.forEach { filaArte.pedir(it.id) }
@@ -542,19 +535,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         familyMode = ativo
         refresh()
     }
-
-    fun addToWatchlist(titulo: String) {
-        watchlist = Watchlist.adicionar(watchlist, titulo)
-        repo.saveWatchlist(watchlist)
-    }
-
-    fun removeFromWatchlist(titulo: String) {
-        watchlist = Watchlist.remover(watchlist, titulo)
-        repo.saveWatchlist(watchlist)
-        chegaram = chegaram.filterNot { it.first.equals(titulo, ignoreCase = true) }
-    }
-
-    fun dismissChegaram() { chegaram = emptyList() }
 
     /** "Vale a pena?" — opinião curta com base na crítica, sem spoiler. */
     fun askVerdict(video: Video) = pedirInsight(video.title) {

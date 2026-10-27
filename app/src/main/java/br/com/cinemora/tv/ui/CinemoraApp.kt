@@ -136,11 +136,6 @@ fun CinemoraApp(
     hideAdult: Boolean,
     onSetHideAdult: (Boolean) -> Unit,
     novidades: List<Video>,
-    watchlist: List<String>,
-    chegaram: List<Pair<String, Video>>,
-    onAddWatchlist: (String) -> Unit,
-    onRemoveWatchlist: (String) -> Unit,
-    onDismissChegaram: () -> Unit,
     tasteProfile: String?,
     onRefreshTaste: () -> Unit,
     insight: String?,
@@ -241,11 +236,6 @@ fun CinemoraApp(
                     hideAdult = hideAdult,
                     onSetHideAdult = onSetHideAdult,
                     novidades = novidades,
-                    watchlist = watchlist,
-                    chegaram = chegaram,
-                    onAddWatchlist = onAddWatchlist,
-                    onRemoveWatchlist = onRemoveWatchlist,
-                    onDismissChegaram = onDismissChegaram,
                     tasteProfile = tasteProfile,
                     onRefreshTaste = onRefreshTaste,
                     insight = insight,
@@ -356,11 +346,6 @@ private fun HomeShell(
     hideAdult: Boolean,
     onSetHideAdult: (Boolean) -> Unit,
     novidades: List<Video>,
-    watchlist: List<String>,
-    chegaram: List<Pair<String, Video>>,
-    onAddWatchlist: (String) -> Unit,
-    onRemoveWatchlist: (String) -> Unit,
-    onDismissChegaram: () -> Unit,
     tasteProfile: String?,
     onRefreshTaste: () -> Unit,
     insight: String?,
@@ -578,9 +563,6 @@ private fun HomeShell(
                         onSetFamilyMode,
                         hideAdult,
                         onSetHideAdult,
-                        watchlist,
-                        onAddWatchlist,
-                        onRemoveWatchlist,
                         tasteProfile,
                         onRefreshTaste,
                     )
@@ -593,14 +575,6 @@ private fun HomeShell(
                     resumeEntry,
                     onResume = onResumeEntry,
                     onDismiss = onDismissResume,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(28.dp),
-                )
-            }
-            if (chegaram.isNotEmpty() && updateState is UpdateState.Idle) {
-                ChegouBanner(
-                    chegaram.first(),
-                    onOpen = { openMovieId = it.id; onDismissChegaram() },
-                    onDismiss = onDismissChegaram,
                     modifier = Modifier.align(Alignment.BottomEnd).padding(28.dp),
                 )
             }
