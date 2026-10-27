@@ -53,8 +53,8 @@ class LauncherProvider : ContentProvider() {
             return cursor
         }
         val rows = when (seg[1]) {
-            OpenLink.MOVIE -> LauncherRows.movies(catalog, store.hideAdult(), store.familyMode(), store.sortOrder())
-            OpenLink.SERIES -> LauncherRows.series(catalog, store.hideAdult(), store.familyMode(), store.sortOrder())
+            OpenLink.MOVIE -> LauncherRows.movies(catalog, store.hideAdult(), store.familyMode(), store.sortOrder(), store.userData())
+            OpenLink.SERIES -> LauncherRows.series(catalog, store.hideAdult(), store.familyMode(), store.sortOrder(), store.userData())
             else -> return cursor
         }
         rows.forEachIndexed { i, row ->

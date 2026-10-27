@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -71,13 +70,9 @@ internal fun SettingsSection(
     onSetFamilyMode: (Boolean) -> Unit,
     hideAdult: Boolean,
     onSetHideAdult: (Boolean) -> Unit,
-    watchlist: List<String>,
-    onAddWatchlist: (String) -> Unit,
-    onRemoveWatchlist: (String) -> Unit,
     tasteProfile: String?,
     onRefreshTaste: () -> Unit,
 ) {
-    var esperado by remember { mutableStateOf("") }
     var cleared by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
@@ -171,28 +166,6 @@ internal fun SettingsSection(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Chip("Ativado", familyMode) { onSetFamilyMode(true) }
             Chip("Desativado", !familyMode) { onSetFamilyMode(false) }
-        }
-
-        Spacer(Modifier.height(18.dp))
-        Text("ME AVISA QUANDO CHEGAR", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-        Spacer(Modifier.height(6.dp))
-        OutlinedTextField(
-            value = esperado,
-            onValueChange = { esperado = it },
-            label = { Text("Nome do filme") },
-            singleLine = true,
-            colors = fieldColors(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(8.dp))
-        ActionButton("Avisar quando entrar") { onAddWatchlist(esperado); esperado = "" }
-        if (watchlist.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                watchlist.take(4).forEach { titulo ->
-                    Chip("$titulo  ✕", false) { onRemoveWatchlist(titulo) }
-                }
-            }
         }
 
         Spacer(Modifier.height(18.dp))

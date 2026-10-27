@@ -109,10 +109,6 @@ class CinemoraRepository(
 
     fun setFamilyMode(ativo: Boolean) = store.setFamilyMode(ativo)
 
-    fun watchlist(): List<String> = store.watchlist()
-
-    fun saveWatchlist(itens: List<String>) = store.saveWatchlist(itens)
-
     fun tasteProfile(): String? = store.tasteProfile()
 
     fun saveTasteProfile(perfil: String) = store.saveTasteProfile(perfil)

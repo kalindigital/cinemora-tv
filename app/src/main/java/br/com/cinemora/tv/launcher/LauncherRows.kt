@@ -5,6 +5,7 @@ import br.com.cinemora.tv.data.CategoryNames
 import br.com.cinemora.tv.data.ConteudoAdulto
 import br.com.cinemora.tv.data.FamilyFilter
 import br.com.cinemora.tv.data.SortOrder
+import br.com.cinemora.tv.data.UserData
 import br.com.cinemora.tv.model.Catalog
 
 /** Um título como o launcher vê: só o que serve para mostrar o cartão, nunca o stream. */
@@ -15,15 +16,24 @@ data class LauncherRow(val title: String, val items: List<LauncherItem>)
 /**
  * As fileiras de Filmes e Séries do jeito que o Cinemora mostra: as categorias na ordem do
  * provedor, com o nome curto, os itens na ordenação escolhida em Definições e os mesmos filtros
- * (conteúdo adulto escondido, modo família).
+ * (conteúdo adulto escondido, modo família). Antes delas, como no app: "Continuar assistindo" (na
+ * ordem em que foram vistos) e "Favoritos".
  */
 object LauncherRows {
     const val MAX_ITEMS = 30
+    const val CONTINUAR = "Continuar assistindo"
+    const val FAVORITOS = "Favoritos"
 
-    fun movies(catalog: Catalog, hideAdult: Boolean, family: Boolean, order: SortOrder): List<LauncherRow> {
+    fun movies(catalog: Catalog, hideAdult: Boolean, family: Boolean, order: SortOrder, user: UserData = UserData()): List<LauncherRow> {
         val c = filtrado(catalog, hideAdult, family)
         val porCategoria = c.movies.groupBy { it.categoryId }
-        return c.movieCategories.mapNotNull { categoria ->
+        val porId = c.movies.associateBy { it.id }
+        val continuar = user.watched.mapNotNull { porId[it] }
+        val favoritos = CatalogSorter.movies(c.movies.filter { "m:${it.id}" in user.favorites }, order)
+        val pessoais = listOf(CONTINUAR to continuar, FAVORITOS to favoritos).filter { it.second.isNotEmpty() }.map { (titulo, itens) ->
+            LauncherRow(titulo, itens.take(MAX_ITEMS).map { LauncherItem(it.id, it.title, it.year, it.rating) })
+        }
+        return pessoais + c.movieCategories.mapNotNull { categoria ->
             val itens = porCategoria[categoria.id].orEmpty()
             if (itens.isEmpty()) return@mapNotNull null
             LauncherRow(
@@ -33,10 +43,16 @@ object LauncherRows {
         }
     }
 
-    fun series(catalog: Catalog, hideAdult: Boolean, family: Boolean, order: SortOrder): List<LauncherRow> {
+    fun series(catalog: Catalog, hideAdult: Boolean, family: Boolean, order: SortOrder, user: UserData = UserData()): List<LauncherRow> {
         val c = filtrado(catalog, hideAdult, family)
         val porCategoria = c.series.groupBy { it.categoryId }
-        return c.seriesCategories.mapNotNull { categoria ->
+        val porChave = c.series.associateBy { "s:${it.id}" }
+        val continuar = user.watched.mapNotNull { porChave[it] }
+        val favoritos = CatalogSorter.series(c.series.filter { "s:${it.id}" in user.favorites }, order)
+        val pessoais = listOf(CONTINUAR to continuar, FAVORITOS to favoritos).filter { it.second.isNotEmpty() }.map { (titulo, itens) ->
+            LauncherRow(titulo, itens.take(MAX_ITEMS).map { LauncherItem(it.id, it.title, it.year, it.rating) })
+        }
+        return pessoais + c.seriesCategories.mapNotNull { categoria ->
             val itens = porCategoria[categoria.id].orEmpty()
             if (itens.isEmpty()) return@mapNotNull null
             LauncherRow(

@@ -95,13 +95,6 @@ class LocalStore(context: Context) {
         prefs.edit().putBoolean(KEY_FAMILY, ativo).apply()
     }
 
-    fun watchlist(): List<String> =
-        prefs.getString(KEY_WATCHLIST, "").orEmpty().split("|").filter { it.isNotBlank() }
-
-    fun saveWatchlist(itens: List<String>) {
-        prefs.edit().putString(KEY_WATCHLIST, itens.joinToString("|")).apply()
-    }
-
     fun tasteProfile(): String? = prefs.getString(KEY_TASTE, null)?.takeIf { it.isNotBlank() }
 
     fun saveTasteProfile(perfil: String) {
@@ -233,7 +226,6 @@ class LocalStore(context: Context) {
         const val KEY_KNOWN = "known_ids"
         const val KEY_FAMILY = "family_mode"
         const val KEY_SEM_ADULTO = "sem_adulto"
-        const val KEY_WATCHLIST = "watchlist"
         const val KEY_TASTE = "taste_profile"
     }
 }
